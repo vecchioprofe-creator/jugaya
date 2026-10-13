@@ -24,11 +24,8 @@ function cuandoEs(iso: string, hoy: string, manana: string) {
 export default async function Inicio() {
   await connection(); // turnos y descuentos dependen de la hora actual
   const ahora = new Date();
-  const [publicidades, clubes, ultimo] = await Promise.all([
-    obtenerPublicidades(),
-    obtenerClubes(),
-    obtenerUltimoMomento(10, ahora),
-  ]);
+  const [publicidades, clubes] = await Promise.all([obtenerPublicidades(), obtenerClubes()]);
+  const ultimo = await obtenerUltimoMomento(clubes, 10, ahora);
   const hoy = fechaAR(ahora);
   const manana = fechaAR(new Date(ahora.getTime() + 86_400_000));
 
@@ -40,7 +37,13 @@ export default async function Inicio() {
         <h2 className="mb-5 font-display text-5xl tracking-wide">
           Elegí tu <span className="text-accent">deporte</span>
         </h2>
-        <Catalogo clubes={clubes} />
+        {clubes.length ? (
+          <Catalogo clubes={clubes} />
+        ) : (
+          <p className="rounded-2xl border border-dashed border-line p-8 text-center text-muted">
+            🏗️ Pronto vas a ver acá los clubes y canchas. ¡Estamos sumando los primeros!
+          </p>
+        )}
       </section>
 
       <div className="overflow-hidden border-y border-line bg-bg2 py-3.5">
@@ -74,7 +77,8 @@ export default async function Inicio() {
               <div className="text-xs capitalize text-muted">{cuandoEs(turno.inicio, hoy, manana)}</div>
               <b className="mt-1 block truncate">{club.nombre}</b>
               <div className="truncate text-[13px] text-muted">
-                {club.canchas.find((c) => c.id === turno.canchaId)?.tipo} · 📍 {club.distanciaKm} km
+                {club.canchas.find((c) => c.id === turno.canchaId)?.tipo}
+                {club.distanciaKm != null && ` · 📍 ${club.distanciaKm} km`}
               </div>
               <div className="mt-2.5 flex items-center justify-between text-[13px]">
                 <span>

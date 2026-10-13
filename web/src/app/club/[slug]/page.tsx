@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { GrillaTurnos } from "@/components/GrillaTurnos";
-import { obtenerClub, obtenerTurnos, proximosDias } from "@/lib/datos";
+import { obtenerClub, obtenerTurnosPorDia, proximosDias } from "@/lib/datos";
 import { DEPORTES, fondo } from "@/lib/deportes";
 import { horasTexto, plata } from "@/lib/reglas";
 
@@ -18,9 +18,7 @@ export default async function PaginaClub({ params, searchParams }: PageProps<"/c
 
   const ahora = new Date();
   const dias = proximosDias(14, ahora);
-  const turnosPorDia = Object.fromEntries(
-    await Promise.all(dias.map(async (d) => [d, await obtenerTurnos(club, d, ahora)] as const)),
-  );
+  const turnosPorDia = await obtenerTurnosPorDia(club, dias, ahora);
   const { dia } = await searchParams;
   const diaInicial = typeof dia === "string" && dias.includes(dia) ? dia : dias[0];
   const deporte = club.deportes[0];
@@ -40,15 +38,21 @@ export default async function PaginaClub({ params, searchParams }: PageProps<"/c
             <span className="font-bold text-[#ffd23f]">
               ★ {club.rating} <span className="font-normal text-muted">({club.ratingCantidad} opiniones)</span>
             </span>
-            <span className="text-muted">📌 {club.direccion}, {club.barrio}</span>
-            <span className="text-muted">📍 a {club.distanciaKm} km</span>
+            <span className="text-muted">📌 {[club.direccion, club.barrio].filter(Boolean).join(", ")}</span>
+            {club.distanciaKm != null && <span className="text-muted">📍 a {club.distanciaKm} km</span>}
           </div>
         </div>
       </section>
 
       <div className="mx-auto grid max-w-6xl gap-6 px-4 pt-6 lg:grid-cols-[1fr_340px]">
         <div className="min-w-0 space-y-6">
-          <GrillaTurnos club={club} dias={dias} diaInicial={diaInicial} turnosPorDia={turnosPorDia} />
+          {club.canchas.length ? (
+            <GrillaTurnos club={club} dias={dias} diaInicial={diaInicial} turnosPorDia={turnosPorDia} />
+          ) : (
+            <p className="rounded-[18px] border border-dashed border-line p-8 text-center text-muted">
+              Este club todavía está cargando sus canchas y horarios. ¡Volvé pronto!
+            </p>
+          )}
 
           <section className="rounded-[18px] border border-line bg-card p-5">
             <h2 className="text-xl font-semibold">Galería</h2>

@@ -34,7 +34,7 @@ export type Club = {
   descripcion: string;
   direccion: string;
   barrio: string;
-  distanciaKm: number;
+  distanciaKm?: number; // se calcula con la ubicación del jugador (todavía no)
   whatsapp: string;
   deportes: Deporte[];
   rating: number;

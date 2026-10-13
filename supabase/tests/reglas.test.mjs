@@ -4,7 +4,10 @@ import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
 import fs from 'fs';
 
 const db = new PGlite({ extensions: { btree_gist, pgcrypto } });
-const sql = fs.readFileSync(new URL('../migrations/20261005000000_init.sql', import.meta.url), 'utf8');
+// todas las migraciones, en orden
+const dir = new URL('../migrations/', import.meta.url);
+const sql = fs.readdirSync(dir).filter((f) => f.endsWith('.sql')).sort()
+  .map((f) => fs.readFileSync(new URL(f, dir), 'utf8')).join('\n');
 
 await db.exec(`
   create schema auth;
@@ -136,6 +139,38 @@ check('Club cancela: CANCELADO_CLUB y devolución de $30.000', c11.e === 'CANCEL
 
 // 12. Plazos configurables con validación
 await expectError('U no puede ser mayor que C', () => db.query(`update clubs set plazo_um_horas = 100 where id=$1`, [club.id]), 'plazos_validos');
+
+// 13. Root: alta de clubes, invitación del dueño por Gmail, suscripciones
+await as(U.p1);
+await expectError('Un jugador no puede crear clubes', () => db.query(`select crear_club('X','x@gmail.com','Básico',20000)`), 'Solo root');
+await db.query(`update profiles set es_root = true where id = $1`, [U.root]);
+await as(U.root);
+const nuevo = await one(`select * from crear_club('Pádel Ñandú Sur', 'Nuevo.Duenio@Gmail.com', 'Pro', 30000, 'Calle 1', 'Lanús', '54911')`);
+check('Club creado pendiente de activación con slug legible', nuevo.estado === 'PENDIENTE_ACTIVACION' && nuevo.slug === 'padel-nandu-sur', nuevo.slug);
+const otro = await one(`select slug from crear_club('Pádel Ñandú Sur', 'otro@gmail.com', 'Pro', 30000)`);
+check('Slug repetido recibe sufijo', otro.slug === 'padel-nandu-sur-2', otro.slug);
+check('Suscripción del mes creada sin pagar', (await one(`select count(*)::int n from subscriptions where club_id=$1 and not pagado and monto=30000`, [nuevo.id])).n === 1);
+check('Generar suscripciones del mes es idempotente', (await one(`select generar_suscripciones_mes() n`)).n >= 0 && (await one(`select count(*)::int n from subscriptions where club_id=$1`, [nuevo.id])).n === 1);
+await expectError('Gmail inválido rechazado', () => db.query(`select crear_club('Y','no-es-mail','Básico',1)`), 'no es válido');
+// el dueño entra DESPUÉS de que root creó el club → queda vinculado
+const nuevoDuenio = '00000000-0000-0000-0000-000000000009';
+await db.query(`insert into auth.users values ($1, 'nuevo.duenio@gmail.com', '{}')`, [nuevoDuenio]);
+check('Dueño invitado queda vinculado al ingresar', (await one(`select user_id from club_members where club_id=$1`, [nuevo.id])).user_id === nuevoDuenio);
+// el dueño ya existía ANTES (p2) → queda vinculado al crear el club
+const c3 = await one(`select id from crear_club('Club de P2', 'P2@gmail.com', 'Básico', 20000)`);
+check('Dueño existente queda vinculado al crear el club', (await one(`select user_id from club_members where club_id=$1`, [c3.id])).user_id === U.p2);
+
+// 14. El dueño no puede tocar campos de root
+await as(nuevoDuenio);
+await expectError('Dueño no puede destacarse solo', () => db.query(`update clubs set destacado_hasta = '2030-01-01' where id=$1`, [nuevo.id]), 'administrador');
+await db.query(`update clubs set descripcion = 'Nueva descripción' where id=$1`, [nuevo.id]);
+check('Dueño sí puede editar sus datos', (await one(`select descripcion from clubs where id=$1`, [nuevo.id])).descripcion === 'Nueva descripción');
+await db.query(`update clubs set estado = 'ACTIVO' where id=$1`, [nuevo.id]);
+check('Dueño puede publicar su club pendiente', (await one(`select estado from clubs where id=$1`, [nuevo.id])).estado === 'ACTIVO');
+await as(U.root);
+await db.query(`update clubs set estado = 'SUSPENDIDO' where id=$1`, [nuevo.id]);
+await as(nuevoDuenio);
+await expectError('Dueño suspendido no puede reactivarse', () => db.query(`update clubs set estado = 'ACTIVO' where id=$1`, [nuevo.id]), 'administrador');
 
 console.log(fails ? `\n✘ ${fails} pruebas fallaron` : '\n✔ Todas las pruebas pasaron');
 process.exit(fails ? 1 : 0);

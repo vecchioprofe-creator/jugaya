@@ -1,6 +1,6 @@
 import Link from "next/link";
+import { usuarioActual } from "@/lib/sesion";
 import { supabaseConfigurado } from "@/lib/supabase/config";
-import { crearClienteServidor } from "@/lib/supabase/servidor";
 import { BotonIngresar } from "./BotonIngresar";
 
 const LINKS = [
@@ -8,17 +8,6 @@ const LINKS = [
   { href: "/#clubes", texto: "Clubes" },
   { href: "/#ultimo-momento", texto: "🔥 Último momento" },
 ];
-
-type Usuario = { email: string; nombre?: string; avatar?: string };
-
-async function usuarioActual(): Promise<Usuario | null> {
-  if (!supabaseConfigurado) return null;
-  const { data } = await (await crearClienteServidor()).auth.getClaims();
-  const c = data?.claims;
-  if (!c) return null;
-  const meta = (c.user_metadata ?? {}) as Record<string, string | undefined>;
-  return { email: String(c.email ?? ""), nombre: meta.full_name, avatar: meta.avatar_url };
-}
 
 export async function Encabezado() {
   const usuario = await usuarioActual();
@@ -41,6 +30,11 @@ export async function Encabezado() {
               {l.texto}
             </Link>
           ))}
+          {usuario?.esRoot && (
+            <Link href="/root" className="whitespace-nowrap rounded-lg px-3 py-2 text-[15px] font-semibold text-violet transition hover:bg-card">
+              Root
+            </Link>
+          )}
         </nav>
         {usuario ? (
           <form action="/auth/salir" method="post" className="flex shrink-0 items-center gap-2">

@@ -83,5 +83,13 @@ Después de ingresar una vez con Google:
 
 ---
 
+## Paso 8 · Actualizar la base: panel root (2 minutos)
+
+1. Supabase → **SQL Editor** → **+ New query**.
+2. Pegá el contenido de `supabase/migrations/20261013000000_root_clubes.sql` → **Run** → "Success".
+3. En la web, recargá: arriba aparece el enlace **Root** (solo para vos) → creá tu primer club.
+
+---
+
 ## Más adelante
 - **Mercado Pago Developers** (pagos) · **Vercel** (publicar la web) · **Google Maps API** (mapa).

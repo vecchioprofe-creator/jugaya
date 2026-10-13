@@ -15,12 +15,14 @@ export function TarjetaClub({ club, indice = 0 }: { club: Club; indice?: number 
         <div className="foto absolute inset-0 transition-transform duration-700 group-hover:scale-110" style={fondo(club.portada, deporte)} />
         <div className="absolute inset-x-2.5 top-2.5 flex justify-between text-xs font-bold">
           {club.destacado ? <span className="rounded-lg bg-accent px-2.5 py-1 text-black">★ DESTACADO</span> : <span />}
-          <span className="rounded-lg bg-black/60 px-2.5 py-1 backdrop-blur">📍 {club.distanciaKm} km</span>
+          {club.distanciaKm != null && (
+            <span className="rounded-lg bg-black/60 px-2.5 py-1 backdrop-blur">📍 {club.distanciaKm} km</span>
+          )}
         </div>
       </div>
       <div className="p-4">
         <h3 className="text-lg font-semibold">{club.nombre}</h3>
-        <p className="text-sm text-muted">📌 {club.direccion}, {club.barrio}</p>
+        <p className="text-sm text-muted">📌 {[club.direccion, club.barrio].filter(Boolean).join(", ")}</p>
         <div className="mt-3 flex items-center justify-between gap-2">
           <span className="truncate rounded-full border border-line bg-card2 px-3 py-1 text-[13px] font-semibold">
             {DEPORTES[deporte].icono} {tipos}
