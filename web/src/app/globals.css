@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+/* Paleta JugáYa (oscuro + verde neón) — mismos tokens que prototipo/index.html */
+:root {
+  --bg: #07090d;
+  --bg2: #0d1117;
+  --card: #121821;
+  --card2: #18202c;
+  --line: #232d3b;
+  --text: #eef3f8;
+  --muted: #8b98a9;
+  --accent: #c6ff3d;
+  --accent2: #22d3ee;
+  --hot: #ff4d6d;
+  --warn: #ffb020;
+  --ok: #2ee59d;
+  --violet: #8b5cf6;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg2: var(--bg2);
+  --color-card: var(--card);
+  --color-card2: var(--card2);
+  --color-line: var(--line);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent2: var(--accent2);
+  --color-hot: var(--hot);
+  --color-warn: var(--warn);
+  --color-ok: var(--ok);
+  --color-violet: var(--violet);
+  --font-sans: var(--font-outfit);
+  --font-display: var(--font-bebas);
+}
+
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  overflow-x: hidden;
+}
+
+/* ---- animaciones ---- */
+@keyframes aparecer { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+@keyframes girar { to { transform: rotate(360deg); } }
+@keyframes latido { 0% { box-shadow: 0 0 0 0 currentColor; } 70% { box-shadow: 0 0 0 10px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+@keyframes marquesina { to { transform: translateX(-50%); } }
+@keyframes brillo { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+
+.aparecer { animation: aparecer .6s cubic-bezier(.2,.8,.2,1) both; }
+.girar { animation: girar 6s linear infinite; }
+.latido { animation: latido 1.5s infinite; }
+.marquesina { animation: marquesina 32s linear infinite; }
+
+.foto { background-size: cover; background-position: center; }
+
+/* franja "en proceso" rayada */
+.rayado {
+  background: repeating-linear-gradient(45deg, rgb(255 176 32 / .14) 0 8px, rgb(255 176 32 / .06) 8px 16px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}

@@ -1,0 +1,892 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JugáYa — Prototipo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{
+  --bg:#07090d; --bg2:#0d1117; --card:#121821; --card2:#18202c; --line:#232d3b;
+  --text:#eef3f8; --muted:#8b98a9; --accent:#c6ff3d; --accent2:#22d3ee; --hot:#ff4d6d;
+  --warn:#ffb020; --ok:#2ee59d; --violet:#8b5cf6;
+  --r:18px; --shadow:0 20px 50px -20px rgba(0,0,0,.7);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:Outfit,system-ui,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden;line-height:1.45}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:0}
+input,select{font-family:inherit}
+.wrap{max-width:1240px;margin:0 auto;padding:0 20px}
+.display{font-family:'Bebas Neue',sans-serif;letter-spacing:1px;line-height:.95}
+.muted{color:var(--muted)}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;font-size:13px;font-weight:600;background:var(--card2);border:1px solid var(--line)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 20px;border-radius:12px;font-weight:700;font-size:15px;transition:.25s;white-space:nowrap}
+.btn-acc{background:var(--accent);color:#0b0f05;box-shadow:0 10px 30px -10px var(--accent)}
+.btn-acc:hover{transform:translateY(-2px);box-shadow:0 16px 40px -10px var(--accent)}
+.btn-ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+.btn-wa{background:#25d366;color:#04210f}
+.btn-sm{padding:8px 14px;font-size:13px;border-radius:10px}
+
+/* ===== demo bar ===== */
+.demobar{background:linear-gradient(90deg,var(--violet),var(--accent2));color:#fff;font-size:13px;text-align:center;padding:6px 10px;font-weight:600}
+/* ===== nav ===== */
+header{position:sticky;top:0;z-index:50;background:rgba(7,9,13,.75);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.nav{display:flex;align-items:center;gap:18px;height:68px}
+.logo{font-family:'Bebas Neue';font-size:32px;letter-spacing:1px;display:flex;align-items:center;gap:8px;cursor:pointer}
+.logo b{color:var(--accent)}
+.logo .ball{width:28px;height:28px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#fff,#c6ff3d 60%,#5c7a12);animation:spin 6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.navlinks{display:flex;gap:4px;margin-left:12px;flex:1;overflow-x:auto;scrollbar-width:none}
+.navlinks a{padding:9px 14px;border-radius:10px;font-weight:500;color:var(--muted);font-size:15px;cursor:pointer;white-space:nowrap;position:relative}
+.navlinks a.on,.navlinks a:hover{color:var(--text);background:var(--card)}
+.navlinks a .dot{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--hot);animation:pulse 1.6s infinite}
+.gbtn{display:flex;align-items:center;gap:8px;background:#fff;color:#222;padding:9px 14px;border-radius:10px;font-weight:600;font-size:14px}
+.avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;color:#000;font-weight:800}
+.hamb{display:none}
+
+/* ===== views ===== */
+.view{display:none;animation:viewIn .5s ease}
+.view.on{display:block}
+@keyframes viewIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+section{padding:46px 0}
+.sec-title{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:22px;flex-wrap:wrap}
+.sec-title h2{font-family:'Bebas Neue';font-size:44px;letter-spacing:1px}
+.sec-title h2 span{color:var(--accent)}
+
+/* ===== hero carousel ===== */
+.hero{position:relative;height:520px;border-radius:0 0 34px 34px;overflow:hidden}
+.slide{position:absolute;inset:0;opacity:0;transition:opacity 1s ease;background-size:cover;background-position:center}
+.slide.on{opacity:1}
+.slide.on .slide-in{animation:slideUp .9s ease both}
+@keyframes slideUp{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:none}}
+.slide::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(7,9,13,.95) 0%,rgba(7,9,13,.55) 55%,rgba(7,9,13,.15))}
+.slide-in{position:relative;z-index:2;height:100%;display:flex;flex-direction:column;justify-content:center;max-width:640px;gap:16px}
+.slide-in h1{font-family:'Bebas Neue';font-size:clamp(48px,8vw,92px);line-height:.9}
+.slide-in h1 em{font-style:normal;color:var(--accent)}
+.slide-in p{font-size:18px;color:#cdd6e0;max-width:520px}
+.tag-ad{position:absolute;top:18px;right:20px;z-index:3;font-size:11px;letter-spacing:2px;text-transform:uppercase;background:rgba(0,0,0,.5);padding:5px 10px;border-radius:6px}
+.dots{position:absolute;bottom:90px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:4}
+.dots i{width:10px;height:10px;border-radius:99px;background:rgba(255,255,255,.35);cursor:pointer;transition:.3s}
+.dots i.on{width:34px;background:var(--accent)}
+
+/* search */
+.search{position:relative;z-index:5;margin:-60px auto 0;max-width:1060px;background:rgba(18,24,33,.9);backdrop-filter:blur(16px);border:1px solid var(--line);border-radius:22px;padding:14px;display:grid;grid-template-columns:repeat(4,1fr) auto;gap:10px;box-shadow:var(--shadow)}
+.field{background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:8px 14px}
+.field label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted)}
+.field select,.field input{width:100%;background:transparent;border:0;color:var(--text);font-size:15px;font-weight:600;outline:0;padding:2px 0}
+.field select option{background:var(--bg2)}
+
+/* categories */
+.cats{display:flex;gap:14px;overflow-x:auto;padding:4px 2px 12px;scrollbar-width:thin}
+.cat{flex:0 0 auto;min-width:150px;padding:18px;border-radius:20px;background:var(--card);border:1px solid var(--line);cursor:pointer;transition:.3s;position:relative;overflow:hidden}
+.cat .ico{font-size:38px;display:block;transition:.4s}
+.cat b{display:block;margin-top:8px;font-size:17px}
+.cat small{color:var(--muted)}
+.cat:hover .ico{transform:scale(1.2) rotate(-10deg)}
+.cat.on{border-color:var(--accent);background:linear-gradient(160deg,rgba(198,255,61,.16),var(--card))}
+.cat.on::after{content:"";position:absolute;bottom:0;left:0;height:3px;width:100%;background:var(--accent)}
+
+/* club cards */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:20px}
+.club{background:var(--card);border-radius:var(--r);overflow:hidden;border:1px solid var(--line);cursor:pointer;transition:transform .35s,box-shadow .35s,border-color .35s;opacity:0;transform:translateY(24px)}
+.club.show{opacity:1;transform:none}
+.club:hover{transform:translateY(-8px) scale(1.01);box-shadow:0 30px 60px -25px rgba(198,255,61,.35);border-color:rgba(198,255,61,.5)}
+.club .img{height:180px;background-size:cover;background-position:center;position:relative;overflow:hidden}
+.club .img::before{content:"";position:absolute;inset:0;background:inherit;background-size:cover;transition:transform .6s}
+.club:hover .img::before{transform:scale(1.12)}
+.club .img .badges{position:absolute;top:10px;left:10px;right:10px;display:flex;justify-content:space-between;z-index:2}
+.club .img .badge{background:rgba(0,0,0,.6);backdrop-filter:blur(6px);padding:4px 10px;border-radius:8px;font-size:12px;font-weight:700}
+.club .img .badge.feat{background:var(--accent);color:#000}
+.club .body{padding:16px}
+.club h3{font-size:19px;margin-bottom:4px}
+.club .addr{font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:center}
+.club .row{display:flex;justify-content:space-between;align-items:center;margin-top:12px}
+.stars{color:#ffd23f;font-weight:700;font-size:14px}
+.next{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
+.next span{font-size:12px;padding:4px 8px;border-radius:7px;background:rgba(46,229,157,.12);color:var(--ok);font-weight:700}
+.next span.p{background:rgba(255,176,32,.12);color:var(--warn)}
+
+/* marquee */
+.marquee{overflow:hidden;border-block:1px solid var(--line);background:var(--bg2);padding:14px 0}
+.marquee .track{display:flex;gap:40px;width:max-content;animation:marq 32s linear infinite}
+.marquee .track span{font-family:'Bebas Neue';font-size:26px;color:var(--muted);white-space:nowrap}
+.marquee .track span b{color:var(--accent)}
+@keyframes marq{to{transform:translateX(-50%)}}
+
+/* slots strip */
+.strip{display:flex;gap:14px;overflow-x:auto;padding-bottom:10px}
+.slotcard{flex:0 0 220px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;cursor:pointer;transition:.3s}
+.slotcard:hover{border-color:var(--accent);transform:translateY(-4px)}
+.slotcard .t{font-family:'Bebas Neue';font-size:38px;color:var(--accent);line-height:1}
+
+/* map */
+#map{height:420px;border-radius:22px;border:1px solid var(--line);overflow:hidden;background:var(--card)}
+.leaflet-container{background:#0d1117}
+.mapgrid{display:grid;grid-template-columns:1fr 340px;gap:18px}
+.near{display:flex;flex-direction:column;gap:10px;max-height:420px;overflow:auto}
+.near .item{display:flex;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px;cursor:pointer;transition:.2s}
+.near .item:hover{border-color:var(--accent)}
+.near .th{width:64px;height:64px;border-radius:10px;background-size:cover;flex:0 0 auto}
+
+/* ===== club page ===== */
+.cover{height:380px;background-size:cover;background-position:center;position:relative;border-radius:0 0 34px 34px;overflow:hidden}
+.cover::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,var(--bg) 0%,rgba(7,9,13,.3) 60%,rgba(7,9,13,.5))}
+.cover .in{position:absolute;z-index:2;bottom:28px;left:0;right:0}
+.cover h1{font-family:'Bebas Neue';font-size:clamp(46px,7vw,78px)}
+.clubgrid{display:grid;grid-template-columns:1fr 360px;gap:24px;margin-top:10px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:20px}
+.services{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.gallery{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:120px;gap:10px;margin-top:14px}
+.gallery div{border-radius:12px;background-size:cover;background-position:center;cursor:zoom-in;transition:.3s}
+.gallery div:hover{transform:scale(1.03);filter:brightness(1.15)}
+.gallery div:nth-child(1){grid-column:span 2;grid-row:span 2}
+.days{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px}
+.day{flex:0 0 auto;text-align:center;padding:10px 14px;border-radius:14px;background:var(--bg2);border:1px solid var(--line);cursor:pointer;min-width:66px}
+.day b{display:block;font-size:22px}
+.day.on{background:var(--accent);color:#000;border-color:var(--accent)}
+.sched{overflow-x:auto;margin-top:16px}
+.sched table{border-collapse:separate;border-spacing:6px;width:100%;min-width:640px}
+.sched th{font-size:13px;color:var(--muted);font-weight:600;text-align:left;padding:4px}
+.slot{border-radius:10px;padding:10px 8px;font-size:12px;font-weight:700;text-align:center;cursor:pointer;transition:.2s;border:1px solid transparent}
+.slot.free{background:rgba(46,229,157,.12);color:var(--ok);border-color:rgba(46,229,157,.3)}
+.slot.free:hover{background:var(--ok);color:#000;transform:scale(1.05)}
+.slot.proc{background:repeating-linear-gradient(45deg,rgba(255,176,32,.14) 0 8px,rgba(255,176,32,.06) 8px 16px);color:var(--warn);border-color:rgba(255,176,32,.35);cursor:help}
+.slot.book{background:var(--bg2);color:#4b5563;cursor:not-allowed;text-decoration:line-through}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;margin-top:12px}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:4px;vertical-align:-2px;margin-right:6px}
+.review{border-top:1px solid var(--line);padding:14px 0}
+.review:first-child{border-top:0}
+
+/* ===== group page ===== */
+.matchhead{background:radial-gradient(1200px 400px at 50% -100px,rgba(198,255,61,.18),transparent),var(--card);border:1px solid var(--line);border-radius:26px;padding:26px;text-align:center;position:relative;overflow:hidden}
+.matchhead h1{font-family:'Bebas Neue';font-size:clamp(40px,6vw,64px)}
+.status{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:999px;font-weight:800;font-size:14px}
+.status.proc{background:rgba(255,176,32,.15);color:var(--warn)}
+.status.ok{background:rgba(46,229,157,.15);color:var(--ok)}
+.status .live{width:9px;height:9px;border-radius:50%;background:currentColor;animation:pulse 1.4s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 currentColor}70%{box-shadow:0 0 0 10px transparent}100%{box-shadow:0 0 0 0 transparent}}
+.countdown{display:flex;gap:12px;justify-content:center;margin:16px 0}
+.countdown div{background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:10px 16px;min-width:76px}
+.countdown b{font-family:'Bebas Neue';font-size:40px;display:block;line-height:1;color:var(--warn)}
+.countdown small{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.progress{height:14px;background:var(--bg2);border-radius:99px;overflow:hidden;position:relative;border:1px solid var(--line)}
+.progress .fill{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:99px;transition:width 1s cubic-bezier(.2,.8,.2,1);position:relative}
+.progress .fill::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.45),transparent);animation:shine 2s infinite}
+@keyframes shine{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+.progress .mark{position:absolute;top:-4px;bottom:-4px;width:3px;background:#fff;border-radius:3px}
+.versus{display:grid;grid-template-columns:1fr 90px 1fr;gap:16px;margin-top:24px;align-items:start}
+.vs{font-family:'Bebas Neue';font-size:64px;text-align:center;align-self:center;background:linear-gradient(180deg,var(--accent),var(--accent2));-webkit-background-clip:text;color:transparent;animation:vsPulse 2s ease-in-out infinite}
+@keyframes vsPulse{50%{transform:scale(1.15)}}
+.team{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:18px}
+.team.a{border-top:4px solid var(--accent)}
+.team.b{border-top:4px solid var(--accent2)}
+.team h3{font-family:'Bebas Neue';font-size:30px;display:flex;justify-content:space-between;align-items:center}
+.player{display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;background:var(--bg2);margin-top:8px;border:1px solid var(--line);animation:viewIn .4s both}
+.player .av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:800;color:#000;flex:0 0 auto}
+.player .nm{flex:1;min-width:0}
+.player .nm b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.player .nm small{color:var(--muted)}
+.player .amt{font-weight:800;font-size:14px}
+.player .amt.paid{color:var(--ok)}
+.player .amt.zero{color:var(--muted)}
+.player .ed{background:none;color:var(--muted);font-size:15px;padding:4px}
+.player .ed:hover{color:var(--hot)}
+.empty{border:2px dashed var(--line);border-radius:22px;padding:30px;text-align:center;color:var(--muted)}
+.share{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:16px}
+.note{font-size:13px;background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.35);border-radius:12px;padding:10px 14px;color:#d6c9ff}
+
+/* ===== requests ===== */
+.tabs{display:inline-flex;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:4px;gap:4px}
+.tabs button{padding:10px 18px;border-radius:10px;background:transparent;color:var(--muted);font-weight:700}
+.tabs button.on{background:var(--accent);color:#000}
+.req{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px;display:flex;flex-direction:column;gap:12px;transition:.3s;position:relative;overflow:hidden}
+.req:hover{transform:translateY(-5px);border-color:var(--accent2)}
+.req .top{display:flex;justify-content:space-between;align-items:start;gap:10px}
+.req h3{font-size:19px}
+.req .need{font-family:'Bebas Neue';font-size:30px;color:var(--accent);line-height:1}
+.req.rival .need{color:var(--accent2)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-size:12px;font-weight:700;padding:4px 10px;border-radius:8px;background:var(--bg2);border:1px solid var(--line)}
+.lvl-amateur{color:var(--ok)} .lvl-intermedio{color:var(--warn)} .lvl-profesional{color:var(--hot)}
+
+/* ===== tournaments ===== */
+.tour{background:var(--card);border:1px solid var(--line);border-radius:22px;overflow:hidden}
+.tour .img{height:150px;background-size:cover;background-position:center;position:relative}
+.tour .img::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,var(--card),transparent)}
+.bracket{display:flex;gap:24px;align-items:center;overflow-x:auto;padding:10px 0}
+.round{display:flex;flex-direction:column;gap:18px;justify-content:space-around;min-width:170px}
+.m{background:var(--bg2);border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:13px}
+.m div{display:flex;justify-content:space-between;padding:7px 10px}
+.m div+div{border-top:1px solid var(--line)}
+.m .w{color:var(--accent);font-weight:800}
+
+/* ===== dashboards ===== */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;position:relative;overflow:hidden}
+.kpi small{color:var(--muted);font-size:13px}
+.kpi b{display:block;font-family:'Bebas Neue';font-size:42px;margin-top:4px}
+.kpi .tr{font-size:13px;font-weight:700;color:var(--ok)}
+.kpi::after{content:"";position:absolute;width:120px;height:120px;border-radius:50%;right:-40px;top:-40px;background:radial-gradient(var(--accent),transparent 70%);opacity:.18}
+.dashgrid{display:grid;grid-template-columns:1.4fr 1fr;gap:18px;margin-top:18px}
+.bars{display:flex;align-items:end;gap:12px;height:200px;padding-top:10px}
+.bars .bar{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:end}
+.bars .bar i{width:100%;border-radius:8px 8px 4px 4px;background:linear-gradient(180deg,var(--accent),rgba(198,255,61,.25));height:0;transition:height 1.2s cubic-bezier(.2,.8,.2,1)}
+.bars .bar small{color:var(--muted);font-size:12px}
+.bars .bar span{font-size:11px;font-weight:700}
+table.t{width:100%;border-collapse:collapse;font-size:14px}
+table.t th{text-align:left;color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:1px;padding:10px;border-bottom:1px solid var(--line)}
+table.t td{padding:12px 10px;border-bottom:1px solid var(--line)}
+table.t tr.click{cursor:pointer;transition:.2s}
+table.t tr.click:hover td{background:var(--card2)}
+.st{font-size:12px;font-weight:800;padding:4px 10px;border-radius:7px;white-space:nowrap}
+.st.ok{background:rgba(46,229,157,.14);color:var(--ok)}
+.st.proc{background:rgba(255,176,32,.14);color:var(--warn)}
+.st.full{background:rgba(34,211,238,.14);color:var(--accent2)}
+.st.bad{background:rgba(255,77,109,.14);color:var(--hot)}
+.toggle{width:46px;height:26px;border-radius:99px;background:var(--line);position:relative;cursor:pointer;transition:.3s;border:0}
+.toggle::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.3s}
+.toggle.on{background:var(--ok)}
+.toggle.on::after{left:23px}
+.cal{display:grid;grid-template-columns:60px repeat(7,1fr);gap:4px;font-size:12px}
+.cal .h{color:var(--muted);text-align:center;padding:4px}
+.cal .c{background:var(--bg2);border-radius:6px;min-height:28px}
+.cal .c.b{background:rgba(198,255,61,.25);border-left:3px solid var(--accent)}
+.cal .c.p{background:rgba(255,176,32,.2);border-left:3px solid var(--warn)}
+.gcal{display:flex;align-items:center;gap:10px;font-size:13px;padding:10px 12px;border-radius:12px;background:rgba(66,133,244,.12);border:1px solid rgba(66,133,244,.35);margin-bottom:14px}
+
+/* drawer & modal */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:90;opacity:0;pointer-events:none;transition:.3s}
+.overlay.on{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(440px,100%);background:var(--bg2);border-left:1px solid var(--line);z-index:100;transform:translateX(100%);transition:.4s cubic-bezier(.2,.8,.2,1);padding:24px;overflow:auto}
+.drawer.on{transform:none}
+.modal{position:fixed;left:50%;top:50%;width:min(520px,calc(100% - 32px));max-height:90vh;overflow:auto;background:var(--bg2);border:1px solid var(--line);border-radius:24px;z-index:100;padding:24px;transform:translate(-50%,-45%) scale(.95);opacity:0;pointer-events:none;transition:.35s}
+.modal.on{transform:translate(-50%,-50%);opacity:1;pointer-events:auto}
+.modal h2{font-family:'Bebas Neue';font-size:36px}
+.close{position:absolute;top:16px;right:16px;background:var(--card);color:var(--text);width:36px;height:36px;border-radius:10px;font-size:18px}
+.inp{width:100%;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;color:var(--text);font-size:15px;outline:0;margin-top:6px}
+.inp:focus{border-color:var(--accent)}
+.stepper{display:flex;align-items:center;gap:12px}
+.stepper button{width:40px;height:40px;border-radius:10px;background:var(--card);color:var(--text);font-size:20px;border:1px solid var(--line)}
+.stepper b{font-family:'Bebas Neue';font-size:40px;min-width:40px;text-align:center}
+.opts{display:grid;gap:10px;margin-top:10px}
+.opt{display:flex;gap:12px;align-items:center;padding:14px;border-radius:14px;border:1px solid var(--line);background:var(--card);cursor:pointer;text-align:left;color:var(--text)}
+.opt.on{border-color:var(--accent);background:rgba(198,255,61,.08)}
+.toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,120px);background:var(--accent);color:#000;font-weight:800;padding:14px 22px;border-radius:14px;z-index:200;transition:.4s cubic-bezier(.2,.8,.2,1);box-shadow:var(--shadow);max-width:calc(100% - 32px)}
+.toast.on{transform:translate(-50%,0)}
+.confetti{position:fixed;top:-10px;width:10px;height:14px;z-index:300;pointer-events:none;animation:fall linear forwards}
+@keyframes fall{to{transform:translateY(110vh) rotate(720deg)}}
+.lightbox{position:fixed;inset:0;z-index:150;background:rgba(0,0,0,.92);display:none;place-items:center;cursor:zoom-out}
+.lightbox.on{display:grid}
+.lightbox div{width:min(1000px,92vw);height:min(640px,80vh);background-size:contain;background-repeat:no-repeat;background-position:center}
+.role{font-size:12px;padding:4px 8px;border-radius:6px;background:var(--violet);color:#fff;font-weight:700}
+
+footer{border-top:1px solid var(--line);padding:30px 0;margin-top:40px;color:var(--muted);font-size:14px}
+
+@media (max-width:900px){
+  .search{grid-template-columns:1fr 1fr;margin:-50px 16px 0}
+  .mapgrid,.clubgrid,.dashgrid{grid-template-columns:1fr}
+  .kpis{grid-template-columns:1fr 1fr}
+  .versus{grid-template-columns:1fr}
+  .vs{font-size:48px}
+  .gallery{grid-template-columns:repeat(2,1fr)}
+  .hero{height:480px}
+  .gbtn span{display:none}
+}
+@media (max-width:560px){
+  .wrap{padding:0 16px}
+  .search{grid-template-columns:1fr}
+  .search .btn{width:100%}
+  .sec-title h2{font-size:36px}
+  .kpis{grid-template-columns:1fr}
+  .countdown div{min-width:60px;padding:8px 10px}
+}
+</style>
+</head>
+<body>
+
+<div class="demobar">🧪 PROTOTIPO VISUAL — los datos son ficticios y nada se guarda. Navegá con el menú.</div>
+
+<header>
+  <div class="wrap nav">
+    <div class="logo" onclick="go('inicio')"><span class="ball"></span><span>Jugá<b>Ya</b></span></div>
+    <nav class="navlinks" id="navlinks">
+      <a data-v="inicio" class="on">Inicio</a>
+      <a data-v="buscar">Buscar turnos</a>
+      <a data-v="club">Club (ejemplo)</a>
+      <a data-v="grupo">Mi grupo</a>
+      <a data-v="solicitudes">Solicitudes<span class="dot"></span></a>
+      <a data-v="torneos">Torneos</a>
+      <a data-v="duenio">Panel dueño</a>
+      <a data-v="root">Root</a>
+    </nav>
+    <button class="gbtn" id="loginBtn" onclick="login()">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>
+      <span>Ingresar con Google</span>
+    </button>
+  </div>
+</header>
+
+<!-- ================= INICIO ================= -->
+<main>
+<div class="view on" id="v-inicio">
+  <div class="hero" id="hero"></div>
+  <div class="search">
+    <div class="field"><label>Deporte</label><select id="sSport"><option value="">Todos</option><option value="futbol">Fútbol</option><option value="padel">Pádel</option><option value="tenis">Tenis</option><option value="basquet">Básquet</option><option value="voley">Vóley</option></select></div>
+    <div class="field"><label>Fecha</label><input type="text" value="Hoy, sáb 4 oct" readonly></div>
+    <div class="field"><label>Horario</label><select><option>Cualquiera</option><option>Mañana (8–12)</option><option>Tarde (12–18)</option><option selected>Noche (18–24)</option></select></div>
+    <div class="field"><label>Zona</label><select><option>📍 Cerca mío</option><option>CABA</option><option>Zona Norte</option><option>Zona Sur</option><option>Zona Oeste</option></select></div>
+    <button class="btn btn-acc" onclick="go('buscar')">🔎 Buscar turnos</button>
+  </div>
+
+  <section class="wrap">
+    <div class="sec-title"><h2>Elegí tu <span>deporte</span></h2><span class="muted">Categorías</span></div>
+    <div class="cats" id="cats"></div>
+  </section>
+
+  <section class="wrap" style="padding-top:0">
+    <div class="sec-title"><h2>Clubes y <span>canchas</span></h2><span class="muted" id="clubCount"></span></div>
+    <div class="grid" id="clubGrid"></div>
+  </section>
+
+  <div class="marquee"><div class="track" id="marq"></div></div>
+
+  <section class="wrap">
+    <div class="sec-title"><h2>🔥 Último <span>momento</span></h2><span class="muted" style="flex:1">Turnos libres de los próximos 3 días con descuento del club · la seña se paga dentro de las 24 h</span><a class="btn btn-ghost btn-sm" onclick="go('buscar')">Ver todos →</a></div>
+    <div class="strip" id="strip"></div>
+  </section>
+
+  <section class="wrap">
+    <div class="sec-title"><h2>Cerca <span>tuyo</span></h2><span class="pill">📍 Ubicación activada · radio 5 km</span></div>
+    <div class="mapgrid"><div id="map"></div><div class="near" id="near"></div></div>
+  </section>
+
+  <section class="wrap">
+    <div class="sec-title"><h2>Te están <span>buscando</span></h2><a class="btn btn-ghost btn-sm" onclick="go('solicitudes')">Ver solicitudes →</a></div>
+    <div class="grid" id="reqTeaser"></div>
+  </section>
+</div>
+
+<!-- ================= BUSCAR ================= -->
+<div class="view" id="v-buscar">
+  <section class="wrap">
+    <div class="sec-title"><h2>Todos los turnos <span>disponibles</span></h2><span class="muted">Búsqueda general, sin importar el club</span></div>
+    <div class="panel" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <span class="pill" style="border-color:var(--accent);color:var(--accent)">⚽ Fútbol 5</span>
+      <span class="pill">Hoy y mañana</span><span class="pill">19:00 – 23:00</span><span class="pill">≤ 5 km</span><span class="pill">⭐ 4+</span><span class="pill">💲 Hasta $90.000</span>
+      <span class="muted" style="margin-left:auto;font-size:14px">Ordenar: <b style="color:var(--text)">Más cerca ▾</b></span>
+    </div>
+    <div class="grid" style="margin-top:20px" id="allSlots"></div>
+  </section>
+</div>
+
+<!-- ================= CLUB ================= -->
+<div class="view" id="v-club">
+  <div class="cover" id="cover"><div class="in wrap" id="coverIn"></div></div>
+  <section class="wrap" style="padding-top:20px">
+    <div class="clubgrid">
+      <div>
+        <div class="panel">
+          <div class="sec-title" style="margin-bottom:10px"><h2 style="font-size:34px">Turnos <span>disponibles</span></h2><span class="muted">Tocá un turno verde para reservar</span></div>
+          <div class="days" id="days"></div>
+          <div class="sched" id="sched"></div>
+          <div class="legend">
+            <span><i style="background:var(--ok)"></i>Libre</span>
+            <span><i style="background:var(--warn)"></i>En proceso de reserva (se libera si no pagan)</span>
+            <span><i style="background:#374151"></i>Reservado</span>
+          </div>
+        </div>
+        <div class="panel" style="margin-top:20px">
+          <h3 style="font-size:22px">Galería</h3>
+          <div class="gallery" id="gallery"></div>
+        </div>
+      </div>
+      <aside style="display:flex;flex-direction:column;gap:20px">
+        <div class="panel">
+          <h3 style="font-size:20px">Sobre el club</h3>
+          <p class="muted" style="margin-top:8px;font-size:14px" id="clubDesc"></p>
+          <div class="services" id="services"></div>
+          <div style="margin-top:16px;display:grid;gap:8px;font-size:14px" id="clubInfo"></div>
+        </div>
+        <div class="panel">
+          <h3 style="font-size:20px">Canchas</h3>
+          <div id="courts" style="display:grid;gap:8px;margin-top:10px;font-size:14px"></div>
+        </div>
+        <div class="panel">
+          <div style="display:flex;justify-content:space-between;align-items:center"><h3 style="font-size:20px">Opiniones</h3><span class="stars">★ 4.8 <span class="muted">(212)</span></span></div>
+          <div id="reviews" style="margin-top:6px"></div>
+          <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:6px" onclick="toast('Solo usuarios que jugaron acá pueden calificar ✍️')">Escribir opinión</button>
+        </div>
+      </aside>
+    </div>
+  </section>
+</div>
+
+<!-- ================= GRUPO ================= -->
+<div class="view" id="v-grupo">
+  <section class="wrap">
+    <div class="matchhead">
+      <div class="pill" style="margin-bottom:10px">🔗 jugaya.app/g/<b>K7PX-29</b> · <span class="role" id="roleTag">Sos el creador</span></div>
+      <h1 id="gTitle">Sáb 11 oct · 21:00 hs</h1>
+      <p class="muted" id="gSub">Complejo El Potrero · Cancha 2 (Fútbol 5 sintético) · 60 min</p>
+      <div style="margin-top:14px" id="gStatus"></div>
+      <div class="countdown" id="cd"></div>
+      <div style="max-width:620px;margin:0 auto;text-align:left">
+        <div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:8px">
+          <span>Recaudado <b id="gPaid"></b></span>
+          <span class="muted">Seña mínima <b style="color:var(--text)" id="gMin"></b> · Total <b style="color:var(--text)" id="gTotal"></b></span>
+        </div>
+        <div class="progress"><div class="fill" id="gFill" style="width:0"></div><div class="mark" id="gMark"></div></div>
+      </div>
+      <div class="share">
+        <button class="btn btn-wa btn-sm" onclick="toast('Abriría WhatsApp con el link del grupo 📲')">Compartir por WhatsApp</button>
+        <button class="btn btn-ghost btn-sm" onclick="copyLink()">📋 Copiar link</button>
+        <button class="btn btn-ghost btn-sm" onclick="openRequestModal('jugador')">🙋 Solicitar jugador</button>
+        <button class="btn btn-ghost btn-sm" id="rivalBtn" onclick="openRequestModal('rival')">⚔️ Buscar equipo rival</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleRole()">👁️ Ver como invitado/creador</button>
+      </div>
+    </div>
+
+    <div class="versus" id="versus"></div>
+
+    <div class="note" style="margin-top:20px">
+      <b>Reglas que muestra este prototipo:</b> el creador puede ✏️ renombrar (el monto queda para la nueva persona) o 🗑️ eliminar jugadores (lo que ya pagó se reparte en partes iguales, solo a nivel visual, entre los que quedan). Al llegar a la seña mínima el turno se confirma y deja de vencer. En modo desafío, cada equipo debe cubrir la mitad de la seña.
+    </div>
+  </section>
+</div>
+
+<!-- ================= SOLICITUDES ================= -->
+<div class="view" id="v-solicitudes">
+  <section class="wrap">
+    <div class="sec-title">
+      <h2>Solicitudes <span>abiertas</span></h2>
+      <div class="tabs"><button class="on" data-t="jugador">🙋 Buscan jugador</button><button data-t="rival">⚔️ Buscan rival</button></div>
+    </div>
+    <div class="panel" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;align-items:center">
+      <span class="muted" style="font-size:14px">Filtrar:</span>
+      <span class="pill">Todos los deportes ▾</span><span class="pill">Nivel ▾</span><span class="pill">Edad 25–35 ▾</span><span class="pill">Puesto ▾</span><span class="pill">Esta semana ▾</span>
+    </div>
+    <div class="grid" id="reqGrid"></div>
+  </section>
+</div>
+
+<!-- ================= TORNEOS ================= -->
+<div class="view" id="v-torneos">
+  <section class="wrap">
+    <div class="sec-title"><h2>Torneos y <span>ligas</span></h2><span class="muted">Organizados por los clubes</span></div>
+    <div class="grid" id="tourGrid"></div>
+    <div class="panel" style="margin-top:24px">
+      <div class="sec-title" style="margin-bottom:8px"><h2 style="font-size:32px">Copa Potrero · <span>Llave en vivo</span></h2><span class="pill">🏆 Premio $500.000</span></div>
+      <div class="bracket">
+        <div class="round">
+          <div class="m"><div class="w"><span>Los Pibes FC</span><b>4</b></div><div><span>La Naranja</span><b>2</b></div></div>
+          <div class="m"><div><span>Deportivo Birra</span><b>1</b></div><div class="w"><span>Real Madrigal</span><b>3</b></div></div>
+          <div class="m"><div class="w"><span>Atlético Tuesday</span><b>5</b></div><div><span>Sin Nombre</span><b>5 (3)</b></div></div>
+          <div class="m"><div><span>Pecheras Azules</span><b>0</b></div><div class="w"><span>Inter de Lanús</span><b>2</b></div></div>
+        </div>
+        <div class="round">
+          <div class="m"><div class="w"><span>Los Pibes FC</span><b>2</b></div><div><span>Real Madrigal</span><b>1</b></div></div>
+          <div class="m"><div><span>Atlético Tuesday</span><b>–</b></div><div><span>Inter de Lanús</span><b>–</b></div></div>
+        </div>
+        <div class="round">
+          <div class="m"><div><span>Los Pibes FC</span><b>–</b></div><div><span>A definir</span><b>–</b></div></div>
+        </div>
+        <div class="round" style="min-width:120px;text-align:center"><div style="font-size:60px">🏆</div><b>Final · 25/10</b></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ================= PANEL DUEÑO ================= -->
+<div class="view" id="v-duenio">
+  <section class="wrap">
+    <div class="sec-title"><h2>Panel · <span>Complejo El Potrero</span></h2><span class="pill">👤 dueño · elpotrero@gmail.com</span></div>
+    <div class="gcal">📅 <span><b>Google Calendar conectado.</b> Cada reserva confirmada se agrega automáticamente a tu calendario.</span></div>
+    <div class="kpis">
+      <div class="kpi"><small>Ingresos de octubre</small><b data-count="1845000">$0</b><span class="tr">▲ 18% vs septiembre</span></div>
+      <div class="kpi"><small>Turnos confirmados</small><b data-count="64">0</b><span class="tr">▲ 9</span></div>
+      <div class="kpi"><small>En proceso (señas pendientes)</small><b data-count="7">0</b><span class="tr" style="color:var(--warn)">$105.000 por cobrar</span></div>
+      <div class="kpi"><small>Ocupación</small><b data-count="78" data-suffix="%">0</b><span class="tr">Pico: 20 a 23 hs</span></div>
+    </div>
+    <div class="dashgrid">
+      <div class="panel">
+        <h3>Ingresos por día (esta semana)</h3>
+        <div class="bars" id="bars"></div>
+      </div>
+      <div class="panel">
+        <h3>Agenda semanal</h3>
+        <div class="cal" id="cal" style="margin-top:12px"></div>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:18px;overflow-x:auto">
+      <div class="sec-title" style="margin-bottom:6px"><h2 style="font-size:30px">Reservas</h2><span class="muted">Tocá una fila para ver jugadores y pagos</span></div>
+      <table class="t" id="ownerTable"></table>
+    </div>
+  </section>
+</div>
+
+<!-- ================= ROOT ================= -->
+<div class="view" id="v-root">
+  <section class="wrap">
+    <div class="sec-title"><h2>Administración <span>root</span></h2><button class="btn btn-acc btn-sm" onclick="toast('Formulario: nombre del club, Gmail del dueño, plan y monto')">+ Crear cuenta de club</button></div>
+    <div class="kpis">
+      <div class="kpi"><small>Clubes activos</small><b data-count="42">0</b></div>
+      <div class="kpi"><small>Suscripciones cobradas (oct)</small><b data-count="1260000">$0</b></div>
+      <div class="kpi"><small>Pendientes de pago</small><b data-count="6">0</b><span class="tr" style="color:var(--hot)">$180.000</span></div>
+      <div class="kpi"><small>Publicidades activas</small><b data-count="5">0</b></div>
+    </div>
+    <div class="panel" style="margin-top:18px;overflow-x:auto">
+      <h3 style="margin-bottom:8px">CRM de suscripciones — Octubre 2026</h3>
+      <table class="t" id="rootTable"></table>
+    </div>
+    <div class="panel" style="margin-top:18px">
+      <div class="sec-title" style="margin-bottom:8px"><h3>Carrusel de publicidades (home)</h3><button class="btn btn-ghost btn-sm" onclick="toast('Subir imagen, link, vigencia y orden')">+ Nueva publicidad</button></div>
+      <div class="grid" id="adsGrid"></div>
+    </div>
+  </section>
+</div>
+</main>
+
+<footer><div class="wrap">JugáYa · prototipo visual de planificación · Etapa 1</div></footer>
+
+<!-- overlays -->
+<div class="overlay" id="overlay" onclick="closeAll()"></div>
+<div class="drawer" id="drawer"></div>
+<div class="modal" id="modal"></div>
+<div class="lightbox" id="lightbox" onclick="this.classList.remove('on')"><div></div></div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+/* ---------- helpers ---------- */
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const money=n=>'$'+Math.round(n).toLocaleString('es-AR');
+const U=id=>`https://images.unsplash.com/${id}?auto=format&fit=crop&w=1200&q=70`;
+const bg=(id,grad)=>`background-image:url('${U(id)}'),${grad}`;
+const G={
+  futbol:'linear-gradient(135deg,#14532d,#0b0f05)', padel:'linear-gradient(135deg,#1e3a8a,#0b0f1a)',
+  tenis:'linear-gradient(135deg,#9a3412,#1a0b05)', basquet:'linear-gradient(135deg,#7c2d12,#150a05)',
+  voley:'linear-gradient(135deg,#6b21a8,#0f0517)'
+};
+const IMG={
+  futbol:['photo-1529900748604-07564a03e7a6','photo-1574629810360-7efbbe195018','photo-1431324155629-1a6deb1dec8d','photo-1551958219-acbc608c6377'],
+  padel:['photo-1612534847738-b3af9bc31f0c','photo-1626224583764-f87db24ac4ea'],
+  tenis:['photo-1554068865-24cecd4e34b8','photo-1595435934249-5df7ed86e1c0'],
+  basquet:['photo-1546519638-68e109498ffc','photo-1505666287802-931dc83948e9'],
+  voley:['photo-1612872087720-bb876e2e67d1']
+};
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('on'),2600)}
+function confetti(){const c=['#c6ff3d','#22d3ee','#ff4d6d','#ffb020','#8b5cf6'];for(let i=0;i<80;i++){const d=document.createElement('div');d.className='confetti';d.style.left=Math.random()*100+'vw';d.style.background=c[i%5];d.style.animationDuration=(1.5+Math.random()*2)+'s';d.style.animationDelay=Math.random()*.4+'s';document.body.appendChild(d);setTimeout(()=>d.remove(),4500)}}
+function closeAll(){['overlay','drawer','modal'].forEach(id=>$('#'+id).classList.remove('on'))}
+function openModal(html){$('#modal').innerHTML='<button class="close" onclick="closeAll()">✕</button>'+html;$('#modal').classList.add('on');$('#overlay').classList.add('on')}
+function openDrawer(html){$('#drawer').innerHTML='<button class="close" onclick="closeAll()">✕</button>'+html;$('#drawer').classList.add('on');$('#overlay').classList.add('on')}
+let logged=false;
+function login(){logged=!logged;$('#loginBtn').outerHTML=logged?`<div id="loginBtn" class="avatar" title="mateo.gomez@gmail.com" onclick="login()" style="cursor:pointer">MG</div>`:'';if(!logged)location.reload();toast(logged?'Sesión iniciada con Google: mateo.gomez@gmail.com':'')}
+
+/* ---------- data ---------- */
+const cats=[
+  {k:'',n:'Todos',i:'🏟️',c:48},{k:'futbol',n:'Fútbol',i:'⚽',c:21},{k:'padel',n:'Pádel',i:'🎾',c:14},
+  {k:'tenis',n:'Tenis',i:'🥎',c:6},{k:'basquet',n:'Básquet',i:'🏀',c:4},{k:'voley',n:'Vóley',i:'🏐',c:3}
+];
+const clubs=[
+  {id:1,n:'Complejo El Potrero',s:'futbol',a:'Av. Mitre 1450, Avellaneda',r:4.8,rv:212,km:1.2,p:'F5 · F7 · F11',lat:-34.662,lng:-58.366,feat:1,img:IMG.futbol[0]},
+  {id:2,n:'Pádel Box Palermo',s:'padel',a:'Godoy Cruz 2340, CABA',r:4.9,rv:340,km:3.4,p:'6 canchas blindex',lat:-34.583,lng:-58.43,feat:1,img:IMG.padel[0]},
+  {id:3,n:'Club Atlético Villa Verde',s:'futbol',a:'Calle 12 nº 880, Quilmes',r:4.5,rv:98,km:6.1,p:'F5 techado',lat:-34.72,lng:-58.26,img:IMG.futbol[1]},
+  {id:4,n:'Tenis Parque Sur',s:'tenis',a:'Av. Roca 3100, CABA',r:4.6,rv:77,km:4.8,p:'Polvo de ladrillo',lat:-34.66,lng:-58.44,img:IMG.tenis[0]},
+  {id:5,n:'Dunk House',s:'basquet',a:'Thames 900, Villa Crespo',r:4.7,rv:65,km:3.9,p:'Parquet profesional',lat:-34.598,lng:-58.437,img:IMG.basquet[0]},
+  {id:6,n:'La Quinta F5',s:'futbol',a:'Ruta 205 km 4, Ezeiza',r:4.4,rv:51,km:9.5,p:'F5 · F8 con quincho',lat:-34.81,lng:-58.52,img:IMG.futbol[2]},
+  {id:7,n:'Smash Pádel Norte',s:'padel',a:'Av. Maipú 2200, Olivos',r:4.8,rv:189,km:11,p:'4 canchas + bar',lat:-34.51,lng:-58.49,img:IMG.padel[1]},
+  {id:8,n:'Arena Vóley Costanera',s:'voley',a:'Av. Costanera 400, CABA',r:4.5,rv:33,km:5.2,p:'Beach vóley',lat:-34.61,lng:-58.36,img:IMG.voley[0]},
+  {id:9,n:'Gol de Media Cancha',s:'futbol',a:'Av. Rivadavia 7800, Floresta',r:4.3,rv:120,km:7.4,p:'F5 · F6',lat:-34.628,lng:-58.48,img:IMG.futbol[3]},
+  {id:10,n:'Club Social Tenis Banfield',s:'tenis',a:'Maipú 600, Banfield',r:4.7,rv:58,km:8.2,p:'Cemento y polvo',lat:-34.745,lng:-58.39,img:IMG.tenis[1]},
+];
+const ads=[
+  {t:'Jugá <em>hoy</em>.<br>Pagá entre todos.',p:'Reservá tu cancha, armá el grupo y que cada uno pague su parte desde un link.',cta:'Buscar turnos',img:IMG.futbol[1],s:'futbol',ad:'JugáYa'},
+  {t:'Pádel Box: <em>2x1</em><br>de lunes a jueves',p:'Turnos de 14 a 17 hs con 50% off. Solo reservando por JugáYa.',cta:'Ver promo',img:IMG.padel[0],s:'padel',ad:'Publicidad'},
+  {t:'Copa <em>Potrero</em><br>inscripciones abiertas',p:'16 equipos · Fútbol 5 · Premio $500.000. Cupos limitados.',cta:'Inscribir equipo',img:IMG.futbol[2],s:'futbol',ad:'Torneo'},
+  {t:'Botines <em>-30%</em><br>con tu código JUGAYA',p:'Espacio publicitario para marcas deportivas.',cta:'Ver tienda',img:IMG.futbol[3],s:'futbol',ad:'Publicidad'},
+];
+const requests=[
+  {t:'jugador',club:'Complejo El Potrero',d:'Hoy · 21:00',s:'⚽ F5',need:'Falta 1 ARQUERO',lvl:'intermedio',age:'25–35',pay:'$3.000 tu parte',by:'Mateo G.'},
+  {t:'jugador',club:'Pádel Box Palermo',d:'Mañana · 19:30',s:'🎾 Pádel',need:'Falta 1 DRIVE',lvl:'amateur',age:'20–40',pay:'$7.500 tu parte',by:'Sofi R.'},
+  {t:'jugador',club:'La Quinta F5',d:'Dom 12 · 11:00',s:'⚽ F8',need:'Faltan 2 jugadores',lvl:'amateur',age:'30–45',pay:'$4.200 tu parte',by:'Nico P.'},
+  {t:'jugador',club:'Dunk House',d:'Mié 15 · 22:00',s:'🏀 3x3',need:'Falta 1 PIVOT',lvl:'profesional',age:'18–30',pay:'$5.000 tu parte',by:'Lucas T.'},
+  {t:'rival',club:'Complejo El Potrero',d:'Sáb 11 · 21:00',s:'⚽ F5 · 5 vs 5',need:'Buscamos EQUIPO',lvl:'intermedio',age:'25–35',pay:'Seña equipo $15.000',by:'Los Pibes FC'},
+  {t:'rival',club:'Gol de Media Cancha',d:'Vie 10 · 23:00',s:'⚽ F6 · 6 vs 6',need:'Buscamos EQUIPO',lvl:'profesional',age:'18–28',pay:'Seña equipo $18.000',by:'Real Madrigal'},
+  {t:'rival',club:'Smash Pádel Norte',d:'Jue 9 · 20:00',s:'🎾 Pádel · 2 vs 2',need:'Buscamos PAREJA',lvl:'intermedio',age:'30–50',pay:'Seña pareja $10.000',by:'Caro & Juli'},
+  {t:'rival',club:'Club Atlético Villa Verde',d:'Dom 12 · 18:00',s:'⚽ F5 · 5 vs 5',need:'Buscamos EQUIPO',lvl:'amateur',age:'40–55',pay:'Seña equipo $12.000',by:'Veteranos del Sur'},
+];
+
+/* ---------- navigation ---------- */
+function go(v){
+  $$('.view').forEach(e=>e.classList.toggle('on',e.id==='v-'+v));
+  $$('#navlinks a').forEach(a=>a.classList.toggle('on',a.dataset.v===v));
+  window.scrollTo({top:0,behavior:'instant'});
+  if(v==='duenio'||v==='root')animateKpis('#v-'+v);
+  if(v==='duenio')setTimeout(()=>$$('#bars i').forEach(i=>i.style.height=i.dataset.h),100);
+  if(v==='inicio'&&map)setTimeout(()=>map.invalidateSize(),200);
+  if(v==='grupo')renderGroup();
+}
+$$('#navlinks a').forEach(a=>a.onclick=()=>go(a.dataset.v));
+
+/* ---------- hero ---------- */
+let slideI=0;
+$('#hero').innerHTML=ads.map((a,i)=>`<div class="slide ${i?'':'on'}" style="${bg(a.img,G[a.s])}"><span class="tag-ad">${a.ad}</span><div class="wrap slide-in"><span class="pill" style="width:max-content">🔥 ${i?'Destacado':'Nuevo'}</span><h1>${a.t}</h1><p>${a.p}</p><div><button class="btn btn-acc" onclick="go('${i==2?'torneos':'buscar'}')">${a.cta} →</button></div></div></div>`).join('')+`<div class="dots">${ads.map((_,i)=>`<i class="${i?'':'on'}" onclick="setSlide(${i})"></i>`).join('')}</div>`;
+function setSlide(i){slideI=i;$$('.slide').forEach((s,j)=>s.classList.toggle('on',j===i));$$('.dots i').forEach((d,j)=>d.classList.toggle('on',j===i))}
+setInterval(()=>setSlide((slideI+1)%ads.length),5500);
+
+/* ---------- categories & clubs ---------- */
+let curCat='';
+function renderCats(){$('#cats').innerHTML=cats.map(c=>`<div class="cat ${c.k===curCat?'on':''}" onclick="curCat='${c.k}';renderCats();renderClubs()"><span class="ico">${c.i}</span><b>${c.n}</b><small>${c.c} lugares</small></div>`).join('')}
+function clubCard(c,i){
+  const hrs=['19:00','20:00','21:00','22:00'].slice(0,2+(c.id%3));
+  return `<div class="club" onclick="openClub(${c.id})" style="transition-delay:${i*60}ms">
+    <div class="img" style="${bg(c.img,G[c.s])}"><div class="badges">${c.feat?'<span class="badge feat">★ DESTACADO</span>':'<span></span>'}<span class="badge">📍 ${c.km} km</span></div></div>
+    <div class="body"><h3>${c.n}</h3><div class="addr">📌 ${c.a}</div>
+    <div class="row"><span class="pill">${cats.find(x=>x.k===c.s).i} ${c.p}</span><span class="stars">★ ${c.r} <span class="muted">(${c.rv})</span></span></div>
+    <div class="next">${hrs.map((h,j)=>`<span class="${j===1?'p':''}">${h}${j===1?' ⏳':''}</span>`).join('')}</div></div></div>`;
+}
+function renderClubs(){
+  const list=clubs.filter(c=>!curCat||c.s===curCat);
+  $('#clubCount').textContent=list.length+' resultados';
+  $('#clubGrid').innerHTML=list.map(clubCard).join('');
+  requestAnimationFrame(()=>requestAnimationFrame(()=>$$('#clubGrid .club').forEach(e=>e.classList.add('show'))));
+}
+renderCats();renderClubs();
+$('#marq').innerHTML=(`<span>⚽ <b>+1.200</b> partidos este mes</span><span>🎾 <b>48</b> clubes</span><span>🔥 Turnos de último minuto con <b>descuento</b></span><span>🏆 Torneos <b>abiertos</b></span><span>💸 Pagá <b>tu parte</b> desde un link</span><span>🙋 ¿Te falta uno? <b>Solicitalo</b></span>`).repeat(2);
+
+/* strip */
+const stripData=[[1,'20:00','F5 · Cancha 1',60000],[2,'20:30','Pádel · Cancha 3',30000],[9,'21:00','F6 · Cancha 2',66000],[5,'21:00','Básquet 3x3',40000],[3,'22:00','F5 techado',55000],[7,'22:30','Pádel · Cancha 1',32000],[6,'23:00','F8 · Cancha 1',80000]];
+const stripHTML=stripData.map(([id,h,c,p],i)=>{const k=clubs.find(x=>x.id===id),off=[30,20,25,15,30,20,25][i],np=p*(1-off/100);return `<div class="slotcard" onclick="openClub(${id})" style="position:relative"><span style="position:absolute;top:10px;right:10px;background:var(--hot);color:#fff;font-weight:800;font-size:12px;padding:4px 8px;border-radius:8px">-${off}%</span><div class="t">${h}</div><div class="muted" style="font-size:12px">${['Hoy','Hoy','Mañana','Mañana','Hoy','Pasado','Hoy'][i]}</div><b>${k.n}</b><div class="muted" style="font-size:13px">${c} · 📍 ${k.km} km</div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:13px"><span><s class="muted">${money(p)}</s> <b>${money(np)}</b></span><span style="color:var(--warn);font-weight:700">Seña en 24 h</span></div></div>`}).join('');
+$('#strip').innerHTML=stripHTML;
+$('#allSlots').innerHTML=stripData.concat(stripData).map(([id,h,c,p],i)=>{const k=clubs.find(x=>x.id===id);return `<div class="club show" onclick="openClub(${id})"><div class="img" style="height:120px;${bg(k.img,G[k.s])}"><div class="badges"><span class="badge feat">${i<7?'HOY':'MAÑANA'} ${h}</span><span class="badge">📍 ${k.km} km</span></div></div><div class="body"><h3 style="font-size:17px">${k.n}</h3><div class="addr">${c}</div><div class="row"><span><b>${money(p)}</b> <span class="muted" style="font-size:12px">seña ${money(p/2)}</span></span><span class="stars">★ ${k.r}</span></div></div></div>`}).join('');
+
+/* map */
+let map=null;
+try{
+  map=L.map('map',{scrollWheelZoom:false}).setView([-34.64,-58.42],11);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{attribution:'© OpenStreetMap © CARTO'}).addTo(map);
+  const ic=e=>L.divIcon({className:'',html:`<div style="width:38px;height:38px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#c6ff3d;display:grid;place-items:center;box-shadow:0 6px 20px rgba(198,255,61,.5)"><span style="transform:rotate(45deg);font-size:18px">${e}</span></div>`,iconSize:[38,38],iconAnchor:[19,38]});
+  clubs.forEach(c=>L.marker([c.lat,c.lng],{icon:ic(cats.find(x=>x.k===c.s).i)}).addTo(map).bindPopup(`<b>${c.n}</b><br>★ ${c.r} · ${c.km} km<br><a href="#" onclick="openClub(${c.id});return false">Ver turnos →</a>`));
+  L.circle([-34.63,-58.40],{radius:5000,color:'#22d3ee',weight:1,fillOpacity:.06}).addTo(map);
+  L.circleMarker([-34.63,-58.40],{radius:8,color:'#fff',fillColor:'#22d3ee',fillOpacity:1}).addTo(map).bindPopup('Estás acá');
+}catch(e){$('#map').innerHTML='<div style="display:grid;place-items:center;height:100%" class="muted">🗺️ Mapa (requiere conexión a internet)</div>'}
+$('#near').innerHTML=[...clubs].sort((a,b)=>a.km-b.km).map(c=>`<div class="item" onclick="openClub(${c.id})"><div class="th" style="${bg(c.img,G[c.s])}"></div><div><b>${c.n}</b><div class="muted" style="font-size:13px">📍 ${c.km} km · ★ ${c.r}</div><div style="font-size:12px;color:var(--ok);font-weight:700;margin-top:4px">3 turnos libres hoy</div></div></div>`).join('');
+
+/* ---------- requests ---------- */
+const reqCard=r=>`<div class="req ${r.t}"><div class="top"><div><div class="need">${r.need}</div><h3 style="margin-top:6px">${r.club}</h3></div><span class="pill">${r.s}</span></div>
+  <div class="chips"><span class="chip">📅 ${r.d}</span><span class="chip lvl-${r.lvl}">● ${r.lvl}</span><span class="chip">🎂 ${r.age} años</span><span class="chip">💸 ${r.pay}</span></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span class="muted" style="font-size:13px">Publicado por <b style="color:var(--text)">${r.by}</b></span>
+  <button class="btn btn-acc btn-sm" onclick="acceptReq('${r.t}','${r.by}')">${r.t==='rival'?'⚔️ Aceptar desafío':'🙋 Sumarme'}</button></div></div>`;
+let reqTab='jugador';
+function renderReqs(){$('#reqGrid').innerHTML=requests.filter(r=>r.t===reqTab).map(reqCard).join('')}
+$$('.tabs button').forEach(b=>b.onclick=()=>{reqTab=b.dataset.t;$$('.tabs button').forEach(x=>x.classList.toggle('on',x===b));renderReqs()});
+renderReqs();
+$('#reqTeaser').innerHTML=[requests[0],requests[4],requests[1]].map(reqCard).join('');
+function acceptReq(t,by){
+  if(!logged){openModal(`<h2>Ingresá para sumarte</h2><p class="muted" style="margin:10px 0 18px">Para aceptar solicitudes necesitás tu cuenta de Google.</p><button class="btn btn-acc" style="width:100%" onclick="closeAll();login()">Ingresar con Google</button>`);return}
+  if(t==='rival'){
+    openModal(`<h2>Aceptar desafío</h2><p class="muted" style="margin:8px 0 14px">Tu equipo enfrentará a <b style="color:var(--text)">${by}</b>. Vas a tener <b style="color:var(--warn)">3 días hábiles</b> para cubrir la seña de tu equipo. Si alguno de los dos equipos no llega, se devuelve lo pagado.</p>
+    <label class="muted" style="font-size:13px">Nombre del equipo</label><input class="inp" value="La Naranja Mecánica">
+    <label class="muted" style="font-size:13px;display:block;margin-top:12px">Tu WhatsApp (lo verá el otro admin)</label><input class="inp" value="+54 9 11 5555-1234">
+    <button class="btn btn-acc" style="width:100%;margin-top:18px" onclick="closeAll();group.mode='desafio';group.b={name:'La Naranja Mecánica',admin:'Mateo G.',wa:'+54 9 11 5555-1234',players:['Mateo G.','Rami','El Turco','Fede','Chino'].map(n=>({n,paid:0}))};group.bStart=Date.now();go('grupo');toast('¡Desafío aceptado! Tu lista quedó enfrentada ⚔️')">Aceptar y crear mi lista</button>`);
+  }else{
+    toast('¡Listo! Te sumaste al grupo. Ya podés pagar tu parte 💸');
+    group.a.players.push({n:'Mateo G. (vos)',paid:0});go('grupo');
+  }
+}
+
+/* ---------- club page ---------- */
+let curClub=clubs[0], curDay=0;
+const courtsBy={futbol:['Cancha 1 · F5','Cancha 2 · F5','Cancha 3 · F7'],padel:['Cancha 1','Cancha 2','Cancha 3','Cancha 4'],tenis:['Cancha 1 · polvo','Cancha 2 · polvo','Cancha 3 · cemento'],basquet:['Cancha principal','Media cancha 3x3'],voley:['Arena 1','Arena 2']};
+const hours=['17:00','18:00','19:00','20:00','21:00','22:00','23:00'];
+function seed(n){let x=Math.sin(n)*10000;return x-Math.floor(x)}
+function openClub(id){
+  curClub=clubs.find(c=>c.id===id);curDay=0;closeAll();
+  const c=curClub, imgs=IMG[c.s];
+  $('#cover').setAttribute('style',bg(c.img,G[c.s]));
+  $('#coverIn').innerHTML=`<span class="pill">${cats.find(x=>x.k===c.s).i} ${cats.find(x=>x.k===c.s).n} ${c.feat?'· <b style="color:var(--accent)">★ Destacado</b>':''}</span><h1>${c.n}</h1><div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center"><span class="stars">★ ${c.r} <span class="muted">(${c.rv} opiniones)</span></span><span class="muted">📌 ${c.a}</span><span class="muted">📍 a ${c.km} km</span></div>`;
+  $('#clubDesc').textContent='Complejo con canchas de césped sintético de última generación, iluminación LED, vestuarios con duchas calientes y quincho para el tercer tiempo. Seña mínima para reservar: 50% del turno.';
+  $('#services').innerHTML=['🚿 Vestuarios','🅿️ Estacionamiento','🍔 Buffet','🔥 Parrilla','💡 Luz LED','🧤 Alquiler de pecheras','📶 Wi-Fi','♿ Accesible'].map(s=>`<span class="chip">${s}</span>`).join('');
+  $('#clubInfo').innerHTML=`<div>🕒 Lun a Dom · 9 a 01 hs</div><div>💸 Seña mínima: <b>50%</b> · Plazo de pago: <b>3 días</b></div><div>📞 <a style="color:#25d366;font-weight:700" onclick="toast('Abriría WhatsApp del club')">WhatsApp del club</a></div>`;
+  $('#courts').innerHTML=courtsBy[c.s].map((k,i)=>`<div style="display:flex;justify-content:space-between;padding:10px;background:var(--bg2);border-radius:10px"><span>${k}</span><b>${money([60000,60000,84000,30000][i%4])}</b></div>`).join('');
+  const g=[c.img,...imgs.filter(x=>x!==c.img),...IMG.futbol,...IMG.padel].slice(0,7);
+  $('#gallery').innerHTML=g.map(id=>`<div style="${bg(id,G[c.s])}" onclick="lb('${id}')"></div>`).join('');
+  $('#reviews').innerHTML=[['Juli M.','★★★★★','Impecables las canchas y el pago dividido es un golazo.'],['Fran T.','★★★★☆','Muy buena luz. El buffet podría mejorar.'],['Agus P.','★★★★★','Reservé desde el celu en 2 minutos.']].map(r=>`<div class="review"><b>${r[0]}</b> <span class="stars">${r[1]}</span><p class="muted" style="font-size:14px">${r[2]}</p></div>`).join('');
+  renderDays();renderSched();go('club');
+}
+function lb(id){$('#lightbox div').style.backgroundImage=`url('${U(id)}')`;$('#lightbox').classList.add('on')}
+function renderDays(){const dn=['Sáb','Dom','Lun','Mar','Mié','Jue','Vie'];$('#days').innerHTML=dn.map((d,i)=>`<div class="day ${i===curDay?'on':''}" onclick="curDay=${i};renderDays();renderSched()"><small>${i===0?'Hoy':d}</small><b>${4+i}</b><small>oct</small></div>`).join('')}
+function renderSched(){
+  const cs=courtsBy[curClub.s];
+  let h='<table><tr><th></th>'+cs.map(c=>`<th>${c}</th>`).join('')+'</tr>';
+  hours.forEach((hr,hi)=>{
+    h+=`<tr><th>${hr}</th>`;
+    cs.forEach((c,ci)=>{
+      const r=seed(curClub.id*100+curDay*31+hi*7+ci*3);
+      if(r<.5)h+=`<td><div class="slot free" onclick="bookSlot('${hr}','${c}')">Libre</div></td>`;
+      else if(r<.7){const d=1+Math.floor(r*10)%3;h+=`<td><div class="slot proc" title="Alguien está reservando. Si no completan la seña en ${d} día(s), vuelve a estar libre." onclick="toast('⏳ En proceso de reserva · quedan ${d} día(s). Tocá \\'Avisame\\' para lista de espera')">⏳ ${d}d</div></td>`}
+      else h+=`<td><div class="slot book">Reservado</div></td>`;
+    });
+    h+='</tr>';
+  });
+  $('#sched').innerHTML=h+'</table>';
+}
+
+/* ---------- booking modal ---------- */
+let bk={n:10,mode:'normal',hr:'',court:''};
+function bookSlot(hr,court){
+  bk={n:10,mode:'normal',hr,court};
+  if(!logged){openModal(`<h2>Ingresá para reservar</h2><p class="muted" style="margin:10px 0 18px">Para reservar turnos necesitás registrarte con tu cuenta de Gmail. Es un click.</p><button class="btn btn-acc" style="width:100%" onclick="closeAll();login();setTimeout(()=>bookSlot('${hr}','${court}'),300)">Ingresar con Google</button>`);return}
+  renderBk();
+}
+function renderBk(){
+  const names=Array.from({length:bk.n},(_,i)=>i===0?'Mateo G. (vos)':(['Rami','El Turco','Fede','Chino','Pipa','Lucho','Gonza','Tincho','Facu','Nacho','Bruno','Santi','Leo'][i-1]||'Jugador '+(i+1)));
+  openModal(`<h2>Reservar ${bk.hr} hs</h2><p class="muted">${curClub.n} · ${bk.court} · ${curDay===0?'Hoy':(4+curDay)+' oct'}</p>
+  <div class="panel" style="margin-top:14px;display:flex;justify-content:space-between;font-size:14px"><span>Precio <b>$60.000</b></span><span>Seña mínima <b style="color:var(--accent)">$30.000</b></span><span>Plazo <b style="color:var(--warn)">3 días</b></span></div>
+  <h3 style="margin-top:18px;font-size:16px">¿Cuántos van a jugar?</h3>
+  <div class="stepper" style="margin-top:8px"><button onclick="bk.n=Math.max(2,bk.n-1);renderBk()">−</button><b>${bk.n}</b><button onclick="bk.n=Math.min(22,bk.n+1);renderBk()">+</button><span class="muted" style="font-size:13px">≈ ${money(30000/bk.n)} de seña c/u</span></div>
+  <h3 style="margin-top:18px;font-size:16px">Nombres o apodos</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">${names.map(n=>`<input class="inp" style="margin:0;padding:9px 12px;font-size:14px" value="${n}">`).join('')}</div>
+  <h3 style="margin-top:18px;font-size:16px">Modalidad</h3>
+  <div class="opts">
+    <button class="opt ${bk.mode==='normal'?'on':''}" onclick="bk.mode='normal';renderBk()"><span style="font-size:26px">👥</span><span><b>Partido entre amigos</b><br><small class="muted">Somos todos nosotros (ej. 5 vs 5 propio)</small></span></button>
+    <button class="opt ${bk.mode==='desafio'?'on':''}" onclick="bk.mode='desafio';renderBk()"><span style="font-size:26px">⚔️</span><span><b>Buscar equipo rival</b><br><small class="muted">Publica una solicitud. Cada equipo paga la mitad de la seña.</small></span></button>
+  </div>
+  <label style="display:flex;gap:8px;align-items:start;margin-top:16px;font-size:13px" class="muted"><input type="checkbox" checked style="margin-top:3px"> Acepto que si no se completa la seña mínima en 3 días el turno se libera y el club retiene lo abonado.</label>
+  <button class="btn btn-acc" style="width:100%;margin-top:16px" onclick="createGroup()">Crear grupo y bloquear turno 🔒</button>`);
+}
+function createGroup(){
+  const names=$$('#modal .inp').map(i=>i.value);
+  group={...group,mode:bk.mode,created:Date.now(),a:{name:'Mi equipo',admin:'Mateo G.',wa:'+54 9 11 4444-0000',players:names.map(n=>({n,paid:0}))},b:null,
+    title:`${curDay===0?'Hoy':['Sáb','Dom','Lun','Mar','Mié','Jue','Vie'][curDay]+' '+(4+curDay)+' oct'} · ${bk.hr} hs`,sub:`${curClub.n} · ${bk.court} · 60 min`};
+  if(bk.mode==='desafio'){group.a.players=group.a.players.slice(0,Math.ceil(names.length/2))}
+  closeAll();confetti();toast('¡Turno bloqueado por 3 días! Compartí el link con tu equipo 🔗');go('grupo');
+}
+
+/* ---------- group page ---------- */
+let creator=true;
+let group={
+  mode:'desafio',created:Date.now()-26*3600e3,bStart:Date.now()-5*3600e3,min:30000,total:60000,
+  title:'Sáb 11 oct · 21:00 hs',sub:'Complejo El Potrero · Cancha 2 (Fútbol 5 sintético) · 60 min',
+  a:{name:'Los Pibes FC',admin:'Mateo G.',wa:'+54 9 11 4444-0000',players:[{n:'Mateo G.',paid:6000},{n:'Rami',paid:3000},{n:'El Turco',paid:3000},{n:'Fede',paid:0},{n:'Chino',paid:0}]},
+  b:{name:'Real Madrigal',admin:'Seba L.',wa:'+54 9 11 6666-2222',players:[{n:'Seba L.',paid:3000},{n:'Pipa',paid:0},{n:'Lucho',paid:3000},{n:'Gonza',paid:0},{n:'Tincho',paid:0}]}
+};
+const colors=['#c6ff3d','#22d3ee','#ffb020','#ff4d6d','#8b5cf6','#2ee59d','#f472b6'];
+const sum=t=>t?t.players.reduce((a,p)=>a+p.paid,0):0;
+function toggleRole(){creator=!creator;toast(creator?'Viendo como CREADOR (puede editar)':'Viendo como INVITADO (solo pagar)');renderGroup()}
+function renderGroup(){
+  const g=group, des=g.mode==='desafio', paid=sum(g.a)+sum(g.b);
+  const teamMin=des?g.min/2:g.min, confirmed=des?(sum(g.a)>=teamMin&&g.b&&sum(g.b)>=teamMin):paid>=g.min;
+  $('#gTitle').textContent=g.title;$('#gSub').textContent=g.sub;
+  $('#roleTag').textContent=creator?'Sos el creador':'Invitado';
+  $('#gStatus').innerHTML=confirmed?`<span class="status ok"><span class="live"></span>TURNO CONFIRMADO ✔ ya no vence</span>`:`<span class="status proc"><span class="live"></span>EN PROCESO DE RESERVA</span>`;
+  const end=g.created+72*3600e3, left=Math.max(0,end-Date.now());
+  $('#cd').style.display=confirmed?'none':'flex';
+  $('#cd').innerHTML=[[Math.floor(left/864e5),'días'],[Math.floor(left/36e5)%24,'horas'],[Math.floor(left/6e4)%60,'min']].map(([n,l])=>`<div><b>${String(n).padStart(2,'0')}</b><small>${l}</small></div>`).join('');
+  $('#gPaid').textContent=money(paid);$('#gMin').textContent=money(g.min);$('#gTotal').textContent=money(g.total);
+  $('#gFill').style.width=Math.min(100,paid/g.total*100)+'%';$('#gMark').style.left=(g.min/g.total*100)+'%';
+  $('#rivalBtn').style.display=des&&!g.b?'':'none';
+  const teamHTML=(t,side)=>{
+    const s=sum(t), per=teamMin/t.players.length, perTot=(des?g.total/2:g.total)/t.players.length;
+    return `<div class="team ${side}"><h3><span>${t.name}</span><span style="font-size:18px;color:${s>=teamMin?'var(--ok)':'var(--warn)'}">${money(s)} / ${money(teamMin)}</span></h3>
+    <div class="progress" style="height:8px;margin:8px 0 4px"><div class="fill" style="width:${Math.min(100,s/teamMin*100)}%"></div></div>
+    <div style="display:flex;justify-content:space-between;font-size:12px" class="muted"><span>Admin: ${t.admin}</span><a style="color:#25d366;font-weight:700;cursor:pointer" onclick="toast('Abriría wa.me/${t.wa.replace(/\D/g,'')}')">💬 ${t.wa}</a></div>
+    ${des&&side==='b'?`<div class="muted" style="font-size:12px;margin-top:4px">⏳ 3 días hábiles desde que aceptaron el desafío</div>`:''}
+    ${t.players.map((p,i)=>`<div class="player"><div class="av" style="background:${colors[i%7]}">${p.n[0]}</div>
+      <div class="nm"><b>${p.n}</b><small>${p.paid>=perTot?'✅ Pagó su total':p.paid>=per?'✅ Cubrió su seña':'Seña sugerida '+money(per)}</small></div>
+      <span class="amt ${p.paid?'paid':'zero'}">${money(p.paid)}</span>
+      <button class="btn btn-acc btn-sm" style="padding:6px 10px" onclick="payModal('${side}',${i})">Pagar</button>
+      ${creator&&(side==='a'||!des)?`<button class="ed" title="Renombrar" onclick="renameP('${side}',${i})">✏️</button><button class="ed" title="Eliminar" onclick="delP('${side}',${i})">🗑️</button>`:''}
+    </div>`).join('')}
+    ${creator&&side==='a'?`<button class="btn btn-ghost btn-sm" style="width:100%;margin-top:10px" onclick="addP('${side}')">+ Agregar jugador</button>`:''}
+    </div>`;
+  };
+  $('#versus').innerHTML=des
+    ? teamHTML(g.a,'a')+`<div class="vs">VS</div>`+(g.b?teamHTML(g.b,'b'):`<div class="empty"><div style="font-size:42px">⚔️</div><b style="color:var(--text)">Esperando rival</b><p style="font-size:14px;margin:6px 0 14px">Tu solicitud está publicada en "Solicitudes". Cuando un equipo acepte, su lista aparece acá.</p><button class="btn btn-ghost btn-sm" onclick="go('solicitudes')">Ver solicitudes</button></div>`)
+    : `<div style="grid-column:1/-1">${teamHTML(g.a,'a')}</div>`;
+  if(confirmed&&!g._c){g._c=1;confetti();toast('🎉 ¡Seña completa! Turno confirmado y agendado en el calendario del club')}
+}
+function team(side){return side==='a'?group.a:group.b}
+function payModal(side,i){
+  const t=team(side),p=t.players[i],des=group.mode==='desafio';
+  const per=(des?group.min/2:group.min)/t.players.length, tot=(des?group.total/2:group.total)/t.players.length;
+  openModal(`<h2>Pagar · ${p.n}</h2><p class="muted" style="margin-bottom:14px">${group.title} · ${t.name}</p>
+  <div class="opts">
+    <button class="opt" onclick="doPay('${side}',${i},${Math.max(0,per-p.paid)})"><span style="font-size:24px">🟡</span><span style="flex:1"><b>Mi parte de la seña</b><br><small class="muted">Asegura el turno</small></span><b>${money(Math.max(0,per-p.paid))}</b></button>
+    <button class="opt" onclick="doPay('${side}',${i},${Math.max(0,tot-p.paid)})"><span style="font-size:24px">🟢</span><span style="flex:1"><b>Mi parte del total</b><br><small class="muted">Y te olvidás</small></span><b>${money(Math.max(0,tot-p.paid))}</b></button>
+    <button class="opt" onclick="doPay('${side}',${i},${des?group.min/2-sum(t):group.min-sum(group.a)})"><span style="font-size:24px">🦸</span><span style="flex:1"><b>Pagar lo que falta de la seña</b><br><small class="muted">Bancar a todos</small></span><b>${money(Math.max(0,(des?group.min/2-sum(t):group.min-sum(group.a))))}</b></button>
+  </div>
+  <p class="muted" style="font-size:12px;margin-top:14px;text-align:center">Pago con Mercado Pago · el dinero va directo a la cuenta del club</p>`);
+}
+function doPay(side,i,amt){if(amt<=0){toast('Ya está cubierto 👌');return}team(side).players[i].paid+=amt;closeAll();toast('Pago acreditado: '+money(amt)+' ✅');renderGroup()}
+function renameP(side,i){const t=team(side),p=t.players[i];const n=prompt('Nuevo nombre/apodo (el monto pagado '+money(p.paid)+' queda para la nueva persona):',p.n);if(n){p.n=n;renderGroup();toast('Renombrado. Se mantiene '+money(p.paid)+' a su favor')}}
+function delP(side,i){
+  const t=team(side),p=t.players[i];if(t.players.length<=1)return;
+  if(!confirm(`¿Eliminar a ${p.n}?`+(p.paid?`\nYa pagó ${money(p.paid)}: se reparte en partes iguales entre los ${t.players.length-1} restantes (+${money(p.paid/(t.players.length-1))} c/u).`:'')))return;
+  t.players.splice(i,1);
+  if(p.paid){const share=p.paid/t.players.length;t.players.forEach(x=>x.paid+=share);toast(`${money(p.paid)} redistribuidos: +${money(share)} a cada uno`)}
+  renderGroup();
+}
+function addP(side){const n=prompt('Nombre o apodo del nuevo jugador:');if(n){team(side).players.push({n,paid:0});renderGroup()}}
+function copyLink(){navigator.clipboard?.writeText('https://jugaya.app/g/K7PX-29');toast('Link copiado 🔗 jugaya.app/g/K7PX-29')}
+function openRequestModal(type){
+  openModal(`<h2>${type==='rival'?'⚔️ Buscar equipo rival':'🙋 Solicitar jugador'}</h2><p class="muted" style="margin-bottom:12px">Se publica en "Solicitudes" con los datos del turno.</p>
+  ${type==='jugador'?`<label class="muted" style="font-size:13px">¿Cuántos faltan?</label><input class="inp" value="1"><label class="muted" style="font-size:13px;display:block;margin-top:10px">Puesto (opcional)</label><select class="inp"><option>Arquero</option><option>Defensor</option><option>Mediocampista</option><option>Delantero</option><option>Cualquiera</option></select>`:`<label class="muted" style="font-size:13px">Cantidad por equipo</label><input class="inp" value="5">`}
+  <label class="muted" style="font-size:13px;display:block;margin-top:10px">Nivel</label><select class="inp"><option>Amateur</option><option selected>Intermedio</option><option>Profesional</option></select>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px"><div><label class="muted" style="font-size:13px">Edad desde</label><input class="inp" value="25"></div><div><label class="muted" style="font-size:13px">Edad hasta</label><input class="inp" value="35"></div></div>
+  <label class="muted" style="font-size:13px;display:block;margin-top:10px">Comentario</label><input class="inp" placeholder="Ej: buscamos alguien que ataje bien 😅">
+  <button class="btn btn-acc" style="width:100%;margin-top:16px" onclick="closeAll();toast('Solicitud publicada 📣')">Publicar solicitud</button>`);
+}
+setInterval(()=>{if($('#v-grupo').classList.contains('on'))renderGroup()},60000);
+
+/* ---------- tournaments ---------- */
+$('#tourGrid').innerHTML=[
+  ['Copa Potrero','futbol',IMG.futbol[2],'F5 · Libre','16 equipos','12/16 inscriptos','$80.000 por equipo'],
+  ['Liga Pádel Primavera','padel',IMG.padel[1],'Parejas · 6ta cat.','32 parejas','30/32 inscriptas','$20.000 por pareja'],
+  ['Torneo +40 Villa Verde','futbol',IMG.futbol[0],'F5 · Veteranos','8 equipos','5/8 inscriptos','$60.000 por equipo'],
+  ['3x3 Street Cup','basquet',IMG.basquet[1],'3x3 · Mixto','24 equipos','24/24 · Completo','$15.000 por equipo'],
+].map(([n,s,img,f,c,ins,price])=>`<div class="tour"><div class="img" style="${bg(img,G[s])}"></div><div style="padding:16px"><h3 style="font-size:20px">${n}</h3><div class="chips" style="margin:8px 0 12px"><span class="chip">${f}</span><span class="chip">${c}</span><span class="chip" style="color:var(--accent)">${ins}</span></div><div style="display:flex;justify-content:space-between;align-items:center"><b>${price}</b><button class="btn btn-acc btn-sm" onclick="toast('Inscripción: capitán + lista de buena fe + pago dividido')" ${ins.includes('Completo')?'disabled style="opacity:.4"':''}>Inscribir equipo</button></div></div></div>`).join('');
+
+/* ---------- owner dashboard ---------- */
+const days7=[['Lun',180],['Mar',210],['Mié',260],['Jue',240],['Vie',420],['Sáb',510],['Dom',350]];
+$('#bars').innerHTML=days7.map(([d,v])=>`<div class="bar"><span>$${v}k</span><i data-h="${v/510*100}%"></i><small>${d}</small></div>`).join('');
+let cal='<div></div>'+['L','M','X','J','V','S','D'].map(d=>`<div class="h">${d}</div>`).join('');
+['18','19','20','21','22','23'].forEach((h,hi)=>{cal+=`<div class="h">${h}h</div>`;for(let d=0;d<7;d++){const r=seed(hi*9+d*5);cal+=`<div class="c ${r<.55?'b':r<.68?'p':''}"></div>`}});
+$('#cal').innerHTML=cal;
+const ownerRows=[
+  ['Sáb 11 · 21:00','Cancha 2 · F5','Los Pibes FC vs Real Madrigal',10,18000,30000,60000,'proc','Desafío · seña 60%'],
+  ['Sáb 11 · 20:00','Cancha 1 · F5','Grupo de Juli M.',10,60000,30000,60000,'full','Saldado total'],
+  ['Sáb 11 · 22:00','Cancha 3 · F7','Grupo de Fran T.',14,42000,42000,84000,'ok','Seña cubierta'],
+  ['Vie 10 · 23:00','Cancha 1 · F5','Grupo de Agus P.',10,12000,30000,60000,'proc','Vence en 1 día'],
+  ['Vie 10 · 21:00','Cancha 2 · F5','Veteranos del Sur',10,30000,30000,60000,'ok','Seña cubierta'],
+  ['Jue 9 · 20:00','Cancha 3 · F7','Grupo de Nico P.',14,8000,42000,84000,'bad','Vencido · retenido'],
+];
+$('#ownerTable').innerHTML=`<tr><th>Turno</th><th>Cancha</th><th>Grupo</th><th>Jug.</th><th>Cobrado</th><th>Estado</th></tr>`+ownerRows.map((r,i)=>`<tr class="click" onclick="ownerDetail(${i})"><td><b>${r[0]}</b></td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td><b>${money(r[4])}</b> <span class="muted">/ ${money(r[6])}</span></td><td><span class="st ${r[7]}">${r[8]}</span></td></tr>`).join('');
+function ownerDetail(i){
+  const r=ownerRows[i];const per=r[4]/r[3];
+  const ps=['Mateo G.','Rami','El Turco','Fede','Chino','Seba L.','Pipa','Lucho','Gonza','Tincho','Facu','Nacho','Bruno','Santi'].slice(0,r[3]).map((n,j)=>[n,Math.round((j%3===0?per*1.6:j%3===1?per*1.2:per*.2)/500)*500]);
+  openDrawer(`<span class="st ${r[7]}">${r[8]}</span><h2 class="display" style="font-size:40px;margin-top:10px">${r[0]}</h2><p class="muted">${r[1]} · ${r[2]}</p>
+  <div class="kpis" style="grid-template-columns:1fr 1fr;margin-top:16px"><div class="kpi"><small>Cobrado online</small><b style="font-size:30px">${money(r[4])}</b></div><div class="kpi"><small>Falta saldar</small><b style="font-size:30px;color:${r[6]-r[4]?'var(--warn)':'var(--ok)'}">${money(r[6]-r[4])}</b></div></div>
+  <div class="progress" style="margin:16px 0 6px"><div class="fill" style="width:${r[4]/r[6]*100}%"></div><div class="mark" style="left:${r[5]/r[6]*100}%"></div></div>
+  <div class="muted" style="font-size:12px">Marca blanca = seña mínima (${money(r[5])})</div>
+  <h3 style="margin:18px 0 6px">${r[3]} jugadores</h3>
+  ${ps.map(([n,a],j)=>`<div class="player"><div class="av" style="background:${colors[j%7]}">${n[0]}</div><div class="nm"><b>${n}</b></div><span class="amt ${a?'paid':'zero'}">${money(a)}</span></div>`).join('')}
+  <button class="btn btn-ghost" style="width:100%;margin-top:16px" onclick="toast('Registrado: saldo cobrado en el club (efectivo)')">💵 Registrar saldo cobrado en el club</button>
+  <button class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="toast('Evento ya sincronizado con Google Calendar')">📅 Ver en Google Calendar</button>`);
+}
+
+/* ---------- root ---------- */
+const rootRows=[['Complejo El Potrero','elpotrero@gmail.com','Premium',45000,1],['Pádel Box Palermo','padelbox@gmail.com','Premium',45000,1],['Club Atlético Villa Verde','villaverde@gmail.com','Básico',20000,0],['Tenis Parque Sur','tenisps@gmail.com','Pro',30000,1],['Dunk House','dunkhouse@gmail.com','Pro',30000,0],['La Quinta F5','laquinta@gmail.com','Básico',20000,1]];
+$('#rootTable').innerHTML=`<tr><th>Club</th><th>Gmail dueño</th><th>Plan</th><th>Mensual</th><th>¿Pagó?</th><th>Estado</th></tr>`+rootRows.map((r,i)=>`<tr><td><b>${r[0]}</b></td><td class="muted">${r[1]}</td><td>${r[2]}</td><td>${money(r[3])}</td><td><button class="toggle ${r[4]?'on':''}" onclick="this.classList.toggle('on');const s=this.closest('tr').querySelector('.st');const on=this.classList.contains('on');s.className='st '+(on?'ok':'bad');s.textContent=on?'Al día':'Debe octubre';toast(on?'Marcado como PAGADO':'Marcado como NO pagado')"></button></td><td><span class="st ${r[4]?'ok':'bad'}">${r[4]?'Al día':'Debe octubre'}</span></td></tr>`).join('');
+$('#adsGrid').innerHTML=ads.map((a,i)=>`<div class="club show"><div class="img" style="height:120px;${bg(a.img,G[a.s])}"><div class="badges"><span class="badge">#${i+1} en carrusel</span><span class="badge feat">Activa</span></div></div><div class="body"><b>${a.t.replace(/<[^>]+>/g,' ')}</b><div class="muted" style="font-size:13px;margin-top:4px">Cliente: ${a.ad} · 01/10 → 31/10</div></div></div>`).join('');
+
+/* ---------- KPI counters ---------- */
+function animateKpis(scope){$$(scope+' [data-count]').forEach(el=>{const to=+el.dataset.count,money_=el.textContent.startsWith('$'),suf=el.dataset.suffix||'';let t0=null;const step=ts=>{t0=t0||ts;const k=Math.min(1,(ts-t0)/1200),v=to*(1-Math.pow(1-k,3));el.textContent=money_?money(v):Math.round(v)+suf;if(k<1)requestAnimationFrame(step)};requestAnimationFrame(step)})}
+</script>
+</body>
+</html>

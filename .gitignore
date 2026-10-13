@@ -1,0 +1,23 @@
+# dependencias
+node_modules/
+
+# variables de entorno (claves): NUNCA se suben
+.env
+.env.*
+!.env.example
+
+# builds
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+
+# supabase local
+supabase/.temp/
+supabase/.branches/
+
+# sistema
+.DS_Store
+Thumbs.db
+*.log
