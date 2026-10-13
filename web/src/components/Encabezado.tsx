@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { supabaseConfigurado } from "@/lib/supabase/config";
+import { crearClienteServidor } from "@/lib/supabase/servidor";
+import { BotonIngresar } from "./BotonIngresar";
 
 const LINKS = [
   { href: "/", texto: "Inicio" },
@@ -6,7 +9,19 @@ const LINKS = [
   { href: "/#ultimo-momento", texto: "🔥 Último momento" },
 ];
 
-export function Encabezado() {
+type Usuario = { email: string; nombre?: string; avatar?: string };
+
+async function usuarioActual(): Promise<Usuario | null> {
+  if (!supabaseConfigurado) return null;
+  const { data } = await (await crearClienteServidor()).auth.getClaims();
+  const c = data?.claims;
+  if (!c) return null;
+  const meta = (c.user_metadata ?? {}) as Record<string, string | undefined>;
+  return { email: String(c.email ?? ""), nombre: meta.full_name, avatar: meta.avatar_url };
+}
+
+export async function Encabezado() {
+  const usuario = await usuarioActual();
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-bg/75 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4">
@@ -27,15 +42,23 @@ export function Encabezado() {
             </Link>
           ))}
         </nav>
-        {/* El login con Google se activa al conectar Supabase */}
-        <button
-          disabled
-          title="Disponible al conectar Supabase"
-          className="flex shrink-0 items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-neutral-800 opacity-90"
-        >
-          <span className="font-bold text-[#4285F4]">G</span>
-          <span className="hidden sm:inline">Ingresar con Google</span>
-        </button>
+        {usuario ? (
+          <form action="/auth/salir" method="post" className="flex shrink-0 items-center gap-2">
+            {usuario.avatar ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={usuario.avatar} alt="" referrerPolicy="no-referrer" className="size-9 rounded-full" />
+            ) : (
+              <span className="grid size-9 place-items-center rounded-full bg-gradient-to-br from-accent to-accent2 font-extrabold text-black">
+                {(usuario.nombre ?? usuario.email)[0]?.toUpperCase()}
+              </span>
+            )}
+            <button className="text-sm text-muted hover:text-text" title={usuario.email}>
+              Salir
+            </button>
+          </form>
+        ) : (
+          <BotonIngresar habilitado={supabaseConfigurado} />
+        )}
       </div>
     </header>
   );

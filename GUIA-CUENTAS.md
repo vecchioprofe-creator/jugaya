@@ -1,60 +1,87 @@
 # Guía de cuentas — Fase 2
 
-> Las cuentas las creás vos. **Nunca pegues contraseñas ni claves secretas en el chat**: cuando haga falta una clave, la vas a pegar vos mismo en el archivo `web/.env.local` (que no se sube a internet).
+> Las cuentas las creás vos. **Nunca pegues contraseñas ni claves secretas en el chat**: las claves se pegan directamente en `web/.env.local` o en el panel de Supabase.
+
+- [x] **Paso 1 · GitHub** — repositorio `vecchioprofe-creator/jugaya` ✅ (código subido)
+- [x] **Paso 2 · Supabase** — proyecto `cihqnbmjtrncoglvljhx` ✅
+- [ ] **Paso 3 · Cargar la base de datos en Supabase**
+- [ ] **Paso 4 · Conectar la web con Supabase**
+- [ ] **Paso 5 · Google Cloud (login con Gmail)**
+- [ ] **Paso 6 · Activar Google en Supabase y probar**
+- [ ] **Paso 7 · Hacerte root**
 
 ---
 
-## Paso 1 · GitHub (guardar el código)
+## Paso 3 · Cargar la base de datos (5 minutos)
 
-1. Entrá a **https://github.com/signup** y registrate (podés usar tu Gmail).
-2. Verificá el email y elegí el plan **Free**.
-3. Creá un repositorio: botón **"+" → New repository**
-   - Nombre: `jugaya`
-   - Visibilidad: **Private** (privado)
-   - **No** marques "Add a README" ni ".gitignore" (ya los tenemos).
-   - ➜ **Create repository**.
-4. Copiá la dirección que aparece (tipo `https://github.com/TU-USUARIO/jugaya.git`) y **pasámela en el chat** (esa sí se puede compartir).
+1. Entrá a tu proyecto en **https://supabase.com/dashboard/project/cihqnbmjtrncoglvljhx**.
+2. Menú izquierdo → **SQL Editor** → **+ New query**.
+3. En tu PC abrí el archivo `supabase/migrations/20261005000000_init.sql` (con el Bloc de notas o VS Code), **seleccioná todo (Ctrl+A), copiá (Ctrl+C)** y pegalo en el editor de Supabase.
+4. Tocá **Run** (o Ctrl+Enter). Tiene que decir **"Success. No rows returned"**.
+5. **+ New query** otra vez → pegá el contenido de `supabase/cron.sql` → **Run**. (Esto programa los vencimientos automáticos cada minuto.)
+6. Verificá: menú **Table Editor** → tienen que aparecer las tablas `profiles`, `clubs`, `bookings`, etc.
 
-✅ Listo cuando: me pasaste la dirección del repositorio.
+> Si aparece un error, copiame **el mensaje de error** (no tiene datos secretos) y lo resuelvo.
 
 ---
 
-## Paso 2 · Supabase (base de datos + login + fotos)
+## Paso 4 · Conectar la web con Supabase (2 minutos)
 
-1. Entrá a **https://supabase.com** → **Start your project** → **Continue with GitHub** (usa la cuenta del paso 1).
-2. Te pide crear una **organización**: nombre `JugaYa`, tipo **Personal**, plan **Free**.
-3. **New project**:
-   - Name: `jugaya`
-   - Database password: tocá **Generate a password** y **guardala en un lugar seguro** (gestor de contraseñas o papel). No me la pases.
-   - Region: **South America (São Paulo)** — la más cercana a Argentina.
-   - ➜ **Create new project** (tarda 1–2 minutos).
-4. Cuando termine, andá a **Project Settings (⚙️) → API** (o "Data API" / "API Keys") y buscá:
-   - **Project URL** (tipo `https://abcdxyz.supabase.co`) → **pasámela en el chat** (es pública).
-   - **anon / publishable key** → es pública, pero igual la vas a pegar vos en `web/.env.local` (te aviso cuándo).
-   - **service_role / secret key** → ⚠️ **secreta**. No la compartas con nadie. La vamos a usar más adelante.
-
-✅ Listo cuando: me pasaste la Project URL.
+1. En Supabase: **Project Settings (⚙️) → API Keys**.
+2. Copiá la **Publishable key** (empieza con `sb_publishable_…`). Si tu panel muestra "anon public", usá esa.
+3. En tu PC abrí `web/.env.local` y pegala después del `=` en la línea:
+   ```
+   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+   ```
+4. Guardá el archivo. (La **Secret key** no la pegues todavía.)
 
 ---
 
-## Paso 3 · Google Cloud (login con Gmail, Calendar y Maps) — *lo hacemos juntos después de Supabase*
+## Paso 5 · Google Cloud: credenciales para "Ingresar con Google" (15 minutos)
 
-Resumen de lo que vamos a hacer (no hace falta que lo hagas todavía):
-1. Crear un proyecto en **https://console.cloud.google.com** llamado `jugaya`.
-2. Configurar la **pantalla de consentimiento OAuth** (nombre de la app, tu email, logo).
-3. Crear credenciales **OAuth Client ID (Web)** con la dirección de retorno que nos da Supabase.
-4. Activar las APIs: **Google Calendar API** y **Maps JavaScript API / Places API**.
-5. Pegar el Client ID y Client Secret en Supabase → Authentication → Providers → Google.
+1. Entrá a **https://console.cloud.google.com** con tu Gmail.
+2. Arriba a la izquierda, selector de proyectos → **New project** → nombre `jugaya` → **Create**. Asegurate de que quede seleccionado.
+3. Menú ☰ → **APIs & Services → OAuth consent screen** (o "Google Auth Platform → Branding"):
+   - App name: `JugáYa`
+   - User support email: tu Gmail
+   - Audience / User type: **External**
+   - Developer contact: tu Gmail → **Save / Create**.
+4. **Clients** (o "Credentials → + Create credentials → OAuth client ID"):
+   - Application type: **Web application**
+   - Name: `JugáYa web`
+   - **Authorized JavaScript origins** → Add URI: `http://localhost:3000`
+   - **Authorized redirect URIs** → Add URI (exacto, copialo de acá):
+     ```
+     https://cihqnbmjtrncoglvljhx.supabase.co/auth/v1/callback
+     ```
+   - **Create**.
+5. Te muestra un **Client ID** y un **Client secret**. **No me los pases**: los vas a pegar en Supabase en el paso 6. (Podés descargar el JSON para tenerlos guardados.)
+6. Mientras la app esté en modo "Testing", en **Audience → Test users** agregá tu Gmail (y el de quien quieras que pruebe).
 
 ---
 
-## Paso 4 · Mercado Pago Developers — *más adelante (pagos)*
-## Paso 5 · Vercel (publicar la web) — *más adelante*
+## Paso 6 · Activar Google en Supabase y probar (5 minutos)
+
+1. Supabase → **Authentication → Sign In / Providers → Google** → activalo (**Enable**).
+2. Pegá el **Client ID** y el **Client secret** del paso 5 → **Save**.
+3. Supabase → **Authentication → URL Configuration**:
+   - **Site URL**: `http://localhost:3000`
+   - **Redirect URLs** → Add URL: `http://localhost:3000/auth/callback`
+4. En tu PC, reiniciá la web (cerrá y volvé a abrir el servidor) y entrá a **http://localhost:3000** → **Ingresar con Google**.
+5. Si todo salió bien, arriba a la derecha aparece **tu foto** y el botón **Salir**. 🎉
 
 ---
 
-### Checklist
-- [ ] GitHub creado + repositorio `jugaya` privado
-- [ ] Supabase creado + proyecto `jugaya` en São Paulo
-- [ ] Contraseña de la base guardada en lugar seguro
-- [ ] Google Cloud (paso 3, juntos)
+## Paso 7 · Hacerte administrador root (1 minuto)
+
+Después de ingresar una vez con Google:
+1. Supabase → **SQL Editor** → **+ New query** → pegá (cambiando por tu Gmail):
+   ```sql
+   update profiles set es_root = true where email = 'TU_GMAIL@gmail.com';
+   ```
+2. **Run** → tiene que decir "1 row affected".
+
+---
+
+## Más adelante
+- **Mercado Pago Developers** (pagos) · **Vercel** (publicar la web) · **Google Maps API** (mapa).
