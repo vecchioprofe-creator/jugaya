@@ -99,6 +99,7 @@ export default async function PanelRoot() {
                     <td className="p-2">
                       <Link href={`/club/${c.slug}`} className="font-semibold hover:text-accent">{c.nombre}</Link>
                       {c.barrio && <div className="text-xs text-muted">{c.barrio}</div>}
+                      <Link href={`/panel/${c.id}`} className="text-xs font-semibold text-accent hover:underline">⚙️ Configurar</Link>
                     </td>
                     <td className="p-2">
                       <div className="text-muted">{duenio?.email ?? "—"}</div>

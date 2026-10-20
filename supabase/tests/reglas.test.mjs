@@ -14,6 +14,12 @@ await db.exec(`
   create table auth.users(id uuid primary key, email text, raw_user_meta_data jsonb);
   create function auth.uid() returns uuid language sql stable as
     $$ select nullif(current_setting('test.uid', true), '')::uuid $$;
+  -- imitación mínima de Supabase Storage
+  create role authenticated;
+  create schema storage;
+  create table storage.buckets(id text primary key, name text, public boolean, file_size_limit bigint, allowed_mime_types text[]);
+  create table storage.objects(bucket_id text, name text);
+  alter table storage.objects enable row level security;
 `);
 await db.exec(sql);
 console.log('✔ migración aplicada');
@@ -165,8 +171,32 @@ await as(nuevoDuenio);
 await expectError('Dueño no puede destacarse solo', () => db.query(`update clubs set destacado_hasta = '2030-01-01' where id=$1`, [nuevo.id]), 'administrador');
 await db.query(`update clubs set descripcion = 'Nueva descripción' where id=$1`, [nuevo.id]);
 check('Dueño sí puede editar sus datos', (await one(`select descripcion from clubs where id=$1`, [nuevo.id])).descripcion === 'Nueva descripción');
+await expectError('No puede publicar sin canchas con horarios', () => db.query(`update clubs set estado = 'ACTIVO' where id=$1`, [nuevo.id]), 'cancha');
+
+// 15. Horarios (guardar_horarios) y cobros
+const canchaN = (await one(`insert into courts (club_id, nombre, deporte) values ($1,'Cancha 1','PADEL') returning id`, [nuevo.id])).id;
+const franjas = [{ dias: [1, 2, 3, 4, 5], desde: '17:00', hasta: '24:00', duracion: 90, precio: 30000 },
+                 { dias: [6, 0], desde: '09:00', hasta: '13:00', duracion: 60, precio: 25000 }];
+check('Guardar horarios crea una fila por día', (await one(`select guardar_horarios($1, $2::jsonb) n`, [canchaN, JSON.stringify(franjas)])).n === 7);
+check('Guardar de nuevo reemplaza (no duplica)', (await one(`select guardar_horarios($1, $2::jsonb) n`, [canchaN, JSON.stringify(franjas)])).n === 7
+  && (await one(`select count(*)::int n from court_schedules where court_id=$1`, [canchaN])).n === 7);
+await expectError('Franjas superpuestas rechazadas', () => db.query(`select guardar_horarios($1, $2::jsonb)`,
+  [canchaN, JSON.stringify([{ dias: [1], desde: '17:00', hasta: '20:00', duracion: 60, precio: 1 }, { dias: [1], desde: '19:00', hasta: '22:00', duracion: 60, precio: 1 }])]), 'superpuestas');
+check('Error deja los horarios anteriores intactos', (await one(`select count(*)::int n from court_schedules where court_id=$1`, [canchaN])).n === 7);
+await as(U.p1);
+await expectError('Otro usuario no puede tocar los horarios', () => db.query(`select guardar_horarios($1, '[]'::jsonb)`, [canchaN]), 'Sin permiso');
+await as(nuevoDuenio);
+await expectError('No puede publicar sin medio de cobro', () => db.query(`update clubs set estado = 'ACTIVO' where id=$1`, [nuevo.id]), 'medio de cobro');
+await expectError('Mercado Pago sin cuenta conectada rechazado', () => db.query(`update clubs set acepta_mercado_pago = true where id=$1`, [nuevo.id]), 'conectar');
+await expectError('Transferencia sin titular rechazada', () => db.query(`update clubs set acepta_transferencia = true, transferencia_alias = 'club.alias' where id=$1`, [nuevo.id]), 'titular');
+await db.query(`update clubs set acepta_transferencia = true, transferencia_alias = 'club.alias', transferencia_titular = 'Club SRL' where id=$1`, [nuevo.id]);
 await db.query(`update clubs set estado = 'ACTIVO' where id=$1`, [nuevo.id]);
-check('Dueño puede publicar su club pendiente', (await one(`select estado from clubs where id=$1`, [nuevo.id])).estado === 'ACTIVO');
+check('Dueño publica cuando cumple los requisitos', (await one(`select estado from clubs where id=$1`, [nuevo.id])).estado === 'ACTIVO');
+check('Fotos: el dueño puede subir a la carpeta de su club', (await one(`select carpeta_es_mi_club($1) ok`, [`${nuevo.id}/foto.jpg`])).ok === true);
+check('Fotos: no puede subir a la carpeta de otro club', (await one(`select carpeta_es_mi_club($1) ok`, [`${c3.id}/foto.jpg`])).ok === false);
+check('Fotos: carpeta que no es un club rechazada', (await one(`select carpeta_es_mi_club('cualquiera/foto.jpg') ok`)).ok === false);
+await as(U.root);
+check('Fotos: root puede subir a cualquier club', (await one(`select carpeta_es_mi_club($1) ok`, [`${c3.id}/foto.jpg`])).ok === true);
 await as(U.root);
 await db.query(`update clubs set estado = 'SUSPENDIDO' where id=$1`, [nuevo.id]);
 await as(nuevoDuenio);

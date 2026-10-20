@@ -30,6 +30,11 @@ export async function Encabezado() {
               {l.texto}
             </Link>
           ))}
+          {usuario?.esDuenio && (
+            <Link href="/panel" className="whitespace-nowrap rounded-lg px-3 py-2 text-[15px] font-semibold text-accent transition hover:bg-card">
+              Mi club
+            </Link>
+          )}
           {usuario?.esRoot && (
             <Link href="/root" className="whitespace-nowrap rounded-lg px-3 py-2 text-[15px] font-semibold text-violet transition hover:bg-card">
               Root
