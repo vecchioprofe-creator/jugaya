@@ -91,5 +91,14 @@ Después de ingresar una vez con Google:
 
 ---
 
+## Paso 9 · Actualizar la base: panel del dueño (2 minutos)
+
+1. Supabase → **SQL Editor** → **+ New query**.
+2. Pegá el contenido de `supabase/migrations/20261020000000_panel_duenio.sql` → **Run** → "Success".
+3. Verificá: menú **Storage** → tiene que aparecer el bucket **club-fotos**.
+4. Probalo: en **Root** tocá **⚙️ Configurar** en un club (o entrá con el Gmail del dueño → **Mi club**).
+
+---
+
 ## Más adelante
 - **Mercado Pago Developers** (pagos) · **Vercel** (publicar la web) · **Google Maps API** (mapa).
