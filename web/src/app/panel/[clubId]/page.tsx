@@ -100,6 +100,9 @@ export default async function PanelClub({ params }: PageProps<"/panel/[clubId]">
               </div>
             </details>
           )}
+          <Link href={`/panel/${club.id}/reservas`} className="rounded-xl bg-accent px-4 py-2 text-sm font-bold text-black">
+            📅 Reservas y comprobantes
+          </Link>
           <Link href={`/club/${club.slug}`} className="rounded-xl border border-line px-4 py-2 text-sm font-semibold hover:border-accent hover:text-accent">
             👁️ Ver mi página {publicado ? "" : "(vista previa)"}
           </Link>

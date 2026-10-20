@@ -100,5 +100,13 @@ Después de ingresar una vez con Google:
 
 ---
 
+## Paso 10 · Actualizar la base: reservas y pagos (2 minutos)
+
+1. Supabase → **SQL Editor** → **+ New query**.
+2. Pegá el contenido de `supabase/migrations/20261020100000_reservas_pagos.sql` → **Run** → "Success".
+3. Verificá: menú **Storage** → tiene que aparecer el bucket **comprobantes** (privado 🔒).
+
+---
+
 ## Más adelante
 - **Mercado Pago Developers** (pagos) · **Vercel** (publicar la web) · **Google Maps API** (mapa).

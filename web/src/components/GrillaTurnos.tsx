@@ -1,14 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { reservar } from "@/app/club/[slug]/acciones";
 import { calcularVencimiento, fechaHora, horasTexto, instanteAR, plata, senaMinima, ZONA } from "@/lib/reglas";
-import type { Club, TipoReserva, Turno } from "@/lib/tipos";
+import { supabaseConfigurado } from "@/lib/supabase/config";
+import type { Club, Deporte, Turno } from "@/lib/tipos";
+import { BotonIngresar } from "./BotonIngresar";
+
+/** Datos del jugador conectado (null = sin sesión). */
+export type JugadorConectado = { nombre: string; whatsapp: string } | null;
 
 type Props = {
   club: Club;
   dias: string[];
   diaInicial: string;
   turnosPorDia: Record<string, Turno[]>;
+  jugador: JugadorConectado;
 };
 
 const ESTILO: Record<Turno["estado"], string> = {
@@ -37,7 +45,7 @@ function ayuda(t: Turno) {
   return undefined;
 }
 
-export function GrillaTurnos({ club, dias, diaInicial, turnosPorDia }: Props) {
+export function GrillaTurnos({ club, dias, diaInicial, turnosPorDia, jugador }: Props) {
   const [dia, setDia] = useState(diaInicial);
   const [elegido, setElegido] = useState<Turno | null>(null);
   const turnos = turnosPorDia[dia] ?? [];
@@ -122,7 +130,7 @@ export function GrillaTurnos({ club, dias, diaInicial, turnosPorDia }: Props) {
         <Leyenda color="bg-[#374151]" texto="Reservado" />
       </div>
 
-      {elegido && <ModalReserva club={club} turno={elegido} onCerrar={() => setElegido(null)} />}
+      {elegido && <ModalReserva club={club} turno={elegido} jugador={jugador} onCerrar={() => setElegido(null)} />}
     </section>
   );
 }
@@ -136,14 +144,35 @@ function Leyenda({ color, texto }: { color: string; texto: string }) {
   );
 }
 
-function ModalReserva({ club, turno, onCerrar }: { club: Club; turno: Turno; onCerrar: () => void }) {
+const JUGADORES_SUGERIDOS: Record<Deporte, number> = { FUTBOL: 10, PADEL: 4, TENIS: 2, BASQUET: 10, VOLEY: 12 };
+
+function ModalReserva({ club, turno, jugador, onCerrar }: { club: Club; turno: Turno; jugador: JugadorConectado; onCerrar: () => void }) {
   const ultimoMomento = turno.estado === "ULTIMO_MOMENTO";
-  const [modo, setModo] = useState<TipoReserva>(ultimoMomento ? "ULTIMO_MOMENTO" : "NORMAL");
   const r = club.reglas;
   const inicio = new Date(turno.inicio);
-  const vence = calcularVencimiento(r, modo, inicio);
+  const vence = calcularVencimiento(r, ultimoMomento ? "ULTIMO_MOMENTO" : "NORMAL", inicio);
   const sena = senaMinima(r, turno.precio);
   const cancha = club.canchas.find((c) => c.id === turno.canchaId);
+  const sugeridos = JUGADORES_SUGERIDOS[cancha?.deporte ?? "FUTBOL"];
+
+  const router = useRouter();
+  const [nombres, setNombres] = useState<string[]>(() => [jugador?.nombre ?? "", ...Array(sugeridos - 1).fill("")]);
+  const [whatsapp, setWhatsapp] = useState(jugador?.whatsapp ?? "");
+  const [acepto, setAcepto] = useState(false);
+  const [error, setError] = useState("");
+  const [pendiente, iniciar] = useTransition();
+
+  const cantidad = (n: number) =>
+    setNombres((ns) => (n > ns.length ? [...ns, ...Array(n - ns.length).fill("")] : ns.slice(0, Math.max(2, n))));
+
+  function confirmar() {
+    setError("");
+    iniciar(async () => {
+      const res = await reservar({ canchaId: turno.canchaId, inicio: turno.inicio, jugadores: nombres, whatsapp });
+      if (res.error) setError(res.error);
+      else router.push(`/g/${res.codigo}?nuevo=1`);
+    });
+  }
 
   return (
     <div className="fixed inset-0 z-[100] grid place-items-center bg-black/60 p-4 backdrop-blur-sm" onClick={onCerrar}>
@@ -168,7 +197,6 @@ function ModalReserva({ club, turno, onCerrar }: { club: Club; turno: Turno; onC
           <div>
             <small className="block text-muted">Seña mínima ({r.senaPct}%)</small>
             <b className="text-accent">{plata(sena)}</b>
-            {modo === "DESAFIO" && <small className="block text-muted">{plata(sena / 2)} por equipo</small>}
           </div>
           <div>
             <small className="block text-muted">Pagala antes de</small>
@@ -176,46 +204,55 @@ function ModalReserva({ club, turno, onCerrar }: { club: Club; turno: Turno; onC
           </div>
         </div>
 
-        {!ultimoMomento && (
-          <div className="mt-4 grid gap-2.5">
-            <Opcion activa={modo === "NORMAL"} onClick={() => setModo("NORMAL")} icono="👥"
-              titulo="Partido entre amigos" detalle={`Tienen ${horasTexto(r.plazoPagoHoras)} para juntar la seña (siempre hasta ${horasTexto(r.corteHoras)} antes del partido).`} />
-            {r.permiteDesafios && (
-              <Opcion activa={modo === "DESAFIO"} onClick={() => setModo("DESAFIO")} icono="⚔️"
-                titulo="Buscar equipo rival" detalle={`Se publica en Solicitudes. Cada equipo paga la mitad de la seña hasta ${horasTexto(r.corteHoras)} antes del partido.`} />
-            )}
-          </div>
-        )}
-        {ultimoMomento && (
-          <p className="mt-4 rounded-xl border border-hot/40 bg-hot/10 p-3 text-sm">
-            🔥 <b>Último momento:</b> {r.descuentoUmPct}% de descuento. La seña se paga dentro de las {horasTexto(r.plazoUmHoras)} de reservar.
-          </p>
-        )}
-
-        <p className="mt-4 text-xs text-muted">
-          {modo === "DESAFIO"
-            ? "Si algún equipo no completa su mitad a tiempo, el turno se libera y se devuelve lo pagado."
-            : "Si no se completa la seña a tiempo, el turno se libera y el club retiene lo abonado."}
+        <p className="mt-4 rounded-xl border border-line bg-card p-3 text-sm">
+          {ultimoMomento ? (
+            <>🔥 <b>Último momento:</b> {r.descuentoUmPct}% de descuento. La seña se paga dentro de las {horasTexto(r.plazoUmHoras)} de reservar.</>
+          ) : (
+            <>👥 El grupo tiene {horasTexto(r.plazoPagoHoras)} para juntar la seña (siempre hasta {horasTexto(r.corteHoras)} antes del partido). Cada uno paga su parte desde el link del grupo.</>
+          )}
         </p>
-        <button disabled className="mt-4 w-full rounded-xl bg-accent px-5 py-3 font-bold text-[#0b0f05] opacity-60">
-          Ingresá con Google para reservar (próximamente)
-        </button>
+
+        {!jugador ? (
+          <div className="mt-5 flex flex-col items-center gap-2 text-center">
+            <p className="text-sm text-muted">Para reservar ingresá con tu cuenta de Google.</p>
+            <BotonIngresar habilitado={supabaseConfigurado} />
+          </div>
+        ) : (
+          <>
+            <div className="mt-5 flex items-center justify-between gap-3">
+              <h3 className="font-semibold">¿Cuántos van a jugar?</h3>
+              <div className="flex items-center gap-3">
+                <button type="button" onClick={() => cantidad(nombres.length - 1)} className="size-9 rounded-lg border border-line bg-card text-lg">−</button>
+                <b className="w-8 text-center font-display text-3xl">{nombres.length}</b>
+                <button type="button" onClick={() => cantidad(Math.min(30, nombres.length + 1))} className="size-9 rounded-lg border border-line bg-card text-lg">+</button>
+              </div>
+            </div>
+            <p className="mt-1 text-xs text-muted">≈ {plata(sena / nombres.length)} de seña por persona. Los nombres se pueden cambiar después.</p>
+            <div className="mt-2 grid grid-cols-2 gap-1.5">
+              {nombres.map((n, i) => (
+                <input key={i} value={n} maxLength={40} placeholder={i === 0 ? "Vos" : `Jugador ${i + 1}`}
+                  onChange={(e) => setNombres((ns) => ns.map((x, j) => (j === i ? e.target.value : x)))}
+                  className="rounded-lg border border-line bg-card px-2.5 py-2 text-sm outline-none focus:border-accent" />
+              ))}
+            </div>
+            <label className="mt-4 block">
+              <span className="text-sm font-semibold">Tu WhatsApp</span>
+              <input value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} inputMode="tel" placeholder="11 4000 0000"
+                className="mt-1 w-full rounded-lg border border-line bg-card px-3 py-2 text-sm outline-none focus:border-accent" />
+              <small className="text-xs text-muted">Para que el club y tu grupo te puedan contactar.</small>
+            </label>
+            <label className="mt-4 flex items-start gap-2 text-xs text-muted">
+              <input type="checkbox" checked={acepto} onChange={(e) => setAcepto(e.target.checked)} className="mt-0.5" />
+              Acepto que si no se completa la seña antes del <b className="capitalize text-text">{fechaHora(vence)}</b>, el turno se libera y el club retiene lo abonado.
+            </label>
+            {error && <p className="mt-3 text-sm font-semibold text-hot">⚠️ {error}</p>}
+            <button onClick={confirmar} disabled={!acepto || pendiente}
+              className="mt-4 w-full rounded-xl bg-accent px-5 py-3 font-bold text-[#0b0f05] transition hover:-translate-y-0.5 disabled:opacity-50">
+              {pendiente ? "Reservando…" : "Crear grupo y bloquear el turno 🔒"}
+            </button>
+          </>
+        )}
       </div>
     </div>
-  );
-}
-
-function Opcion(p: { activa: boolean; onClick: () => void; icono: string; titulo: string; detalle: string }) {
-  return (
-    <button
-      onClick={p.onClick}
-      className={`flex items-center gap-3 rounded-2xl border p-3.5 text-left transition ${p.activa ? "border-accent bg-accent/10" : "border-line bg-card"}`}
-    >
-      <span className="text-2xl">{p.icono}</span>
-      <span>
-        <b>{p.titulo}</b>
-        <small className="block text-muted">{p.detalle}</small>
-      </span>
-    </button>
   );
 }

@@ -5,6 +5,7 @@ import { GrillaTurnos } from "@/components/GrillaTurnos";
 import { obtenerClub, obtenerTurnosPorDia, proximosDias } from "@/lib/datos";
 import { DEPORTES, fondo } from "@/lib/deportes";
 import { horasTexto, plata } from "@/lib/reglas";
+import { usuarioActual } from "@/lib/sesion";
 
 export async function generateMetadata({ params }: PageProps<"/club/[slug]">): Promise<Metadata> {
   const club = await obtenerClub((await params).slug);
@@ -18,7 +19,10 @@ export default async function PaginaClub({ params, searchParams }: PageProps<"/c
 
   const ahora = new Date();
   const dias = proximosDias(14, ahora);
-  const turnosPorDia = await obtenerTurnosPorDia(club, dias, ahora);
+  const [turnosPorDia, usuario] = await Promise.all([obtenerTurnosPorDia(club, dias, ahora), usuarioActual()]);
+  const jugador = usuario
+    ? { nombre: usuario.apodo ?? usuario.nombre?.split(" ")[0] ?? "", whatsapp: usuario.whatsapp ?? "" }
+    : null;
   const { dia } = await searchParams;
   const diaInicial = typeof dia === "string" && dias.includes(dia) ? dia : dias[0];
   const deporte = club.deportes[0];
@@ -47,7 +51,7 @@ export default async function PaginaClub({ params, searchParams }: PageProps<"/c
       <div className="mx-auto grid max-w-6xl gap-6 px-4 pt-6 lg:grid-cols-[1fr_340px]">
         <div className="min-w-0 space-y-6">
           {club.canchas.length ? (
-            <GrillaTurnos club={club} dias={dias} diaInicial={diaInicial} turnosPorDia={turnosPorDia} />
+            <GrillaTurnos club={club} dias={dias} diaInicial={diaInicial} turnosPorDia={turnosPorDia} jugador={jugador} />
           ) : (
             <p className="rounded-[18px] border border-dashed border-line p-8 text-center text-muted">
               Este club todavía está cargando sus canchas y horarios. ¡Volvé pronto!

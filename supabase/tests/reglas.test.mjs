@@ -16,6 +16,7 @@ await db.exec(`
     $$ select nullif(current_setting('test.uid', true), '')::uuid $$;
   -- imitación mínima de Supabase Storage
   create role authenticated;
+  create role anon;
   create schema storage;
   create table storage.buckets(id text primary key, name text, public boolean, file_size_limit bigint, allowed_mime_types text[]);
   create table storage.objects(bucket_id text, name text);
@@ -201,6 +202,49 @@ await as(U.root);
 await db.query(`update clubs set estado = 'SUSPENDIDO' where id=$1`, [nuevo.id]);
 await as(nuevoDuenio);
 await expectError('Dueño suspendido no puede reactivarse', () => db.query(`update clubs set estado = 'ACTIVO' where id=$1`, [nuevo.id]), 'administrador');
+
+// 16. Pagos por transferencia y revisión del club
+const priv = await one(`select has_function_privilege('anon', 'aprobar_pago(uuid,uuid)', 'execute') a,
+                               has_function_privilege('authenticated', 'vencer_reservas()', 'execute') b,
+                               has_function_privilege('authenticated', 'recalcular_reserva(uuid)', 'execute') c`);
+check('Funciones internas bloqueadas para la web', !priv.a && !priv.b && !priv.c, JSON.stringify(priv));
+await as(U.root);
+await db.query(`update clubs set acepta_transferencia = true, transferencia_alias = 'potrero.club', transferencia_titular = 'Potrero SA' where id=$1`, [club.id]);
+await as(U.p1);
+const b16 = await reservar(9, 18);
+const j16 = (await db.query(`select tp.id from team_players tp join teams t on t.id = tp.team_id where t.booking_id=$1 order by tp.orden`, [b16.id])).rows;
+await as(''); // invitado sin cuenta
+await expectError('Transferencia sin comprobante de esta reserva rechazada', () => db.query(`select informar_transferencia($1, 6000, 'otra/foto.jpg')`, [j16[1].id]), 'comprobante');
+await expectError('No se puede pagar más que el total', () => db.query(`select informar_transferencia($1, 70000, $2)`, [j16[1].id, `${b16.id}/x.jpg`]), 'supera');
+const pago16 = (await one(`select informar_transferencia($1, 30000, $2) id`, [j16[1].id, `${b16.id}/comp.jpg`])).id;
+check('Invitado informa transferencia: queda en revisión', (await one(`select estado from payments where id=$1`, [pago16])).estado === 'EN_REVISION');
+check('Comprobantes: se pueden subir a una reserva activa', (await one(`select carpeta_es_reserva_activa($1) ok`, [`${b16.id}/comp.jpg`])).ok === true);
+await as(U.p2);
+await expectError('Otro usuario no puede aprobar pagos', () => db.query(`select revisar_pago($1, true)`, [pago16]), 'Sin permiso');
+check('Un jugador no puede ver comprobantes', (await one(`select carpeta_es_reserva_de_mi_club($1) ok`, [`${b16.id}/comp.jpg`])).ok === false);
+await as(U.owner);
+check('El club sí ve los comprobantes', (await one(`select carpeta_es_reserva_de_mi_club($1) ok`, [`${b16.id}/comp.jpg`])).ok === true);
+check('Club aprueba la seña: CONFIRMADO', (await one(`select revisar_pago($1, true) e`, [pago16])).e === 'CONFIRMADO');
+check('El monto se acredita al jugador', (await one(`select monto_acreditado::int m from team_players where id=$1`, [j16[1].id])).m === 30000);
+await expectError('Un pago no se revisa dos veces', () => db.query(`select revisar_pago($1, false)`, [pago16]), 'ya fue revisado');
+await as('');
+const pago16b = (await one(`select informar_transferencia($1, 5000, $2) id`, [j16[2].id, `${b16.id}/c2.jpg`])).id;
+await as(U.owner);
+await db.query(`select revisar_pago($1, false, 'No se ve el monto')`, [pago16b]);
+const rech = await one(`select p.estado, p.motivo_rechazo, tp.monto_acreditado::int m from payments p join team_players tp on tp.id = p.team_player_id where p.id=$1`, [pago16b]);
+check('Rechazo guarda el motivo y no acredita', rech.estado === 'RECHAZADO' && rech.motivo_rechazo === 'No se ve el monto' && rech.m === 0, JSON.stringify(rech));
+check('Cobro en el club completa el total: SALDADO', (await one(`select registrar_cobro_club($1, 30000) e`, [b16.id])).e === 'SALDADO');
+await expectError('Reserva saldada no admite más cobros', () => db.query(`select registrar_cobro_club($1, 1)`, [b16.id]), 'no está activa');
+const res16 = await one(`select aprobado::int a, en_revision::int r from resumen_pagos($1)`, [b16.id]);
+check('Resumen de pagos: aprobado y en revisión', res16.a === 60000 && res16.r === 0, JSON.stringify(res16));
+const colPriv = await one(`select has_column_privilege('anon', 'teams', 'whatsapp', 'select') w, has_column_privilege('anon', 'teams', 'nombre', 'select') n`);
+check('WhatsApp del admin no se lee directo de la tabla', colPriv.w === false && colPriv.n === true, JSON.stringify(colPriv));
+const team16 = (await one(`select id from teams where booking_id=$1`, [b16.id])).id;
+await db.query(`update teams set whatsapp = '5491100000000' where id=$1`, [team16]);
+await as('');
+check('Sin sesión no se ve el WhatsApp del admin', (await one(`select contacto_admin($1) w`, [team16])).w === null);
+await as(U.p2);
+check('Con sesión sí se ve el WhatsApp del admin', (await one(`select contacto_admin($1) w`, [team16])).w === '5491100000000');
 
 console.log(fails ? `\n✘ ${fails} pruebas fallaron` : '\n✔ Todas las pruebas pasaron');
 process.exit(fails ? 1 : 0);
